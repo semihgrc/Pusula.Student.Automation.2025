@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Pusula.Student.Automation</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pusula.Student.Automation.Domain\Pusula.Student.Automation.Domain.csproj" />
+    <ProjectReference Include="..\Pusula.Student.Automation.TestBase\Pusula.Student.Automation.TestBase.csproj" />
+  </ItemGroup>
+
+</Project>

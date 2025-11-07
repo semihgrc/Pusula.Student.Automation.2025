@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres
+    container_name: pth_postgres
+    restart: always
+    volumes:
+      - pthpostgresdata:/var/lib/postgresql
+    command: postgres -c 'max_connections=250'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: myPassw0rd
+      POSTGRES_DB: test_db
+      TZ: Europe/Istanbul 
+    ports:
+      - "5436:5432"
+    networks: 
+      - pth-network
+
+
+  pgadmin4:
+    image: dpage/pgadmin4
+    container_name: pth_pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: training@pusulayazilim.com.tr
+      PGADMIN_DEFAULT_PASSWORD: myPassw0rd
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    volumes:
+      - pthpgadmin4data:/var/lib/pgadmin
+    networks: 
+      - pth-network
+
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    restart: always
+    environment:
+      - xpack.watcher.enabled=false
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      # - ELASTIC_USERNAME=elastic
+      # - ELASTIC_PASSWORD=1q2w3e*
+    ports:
+      - "9200:9200"
+    volumes:
+      - pthesdata:/usr/share/elasticsearch/data
+    networks:
+      - pth-network
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:9.2.0
+    restart: always
+    environment:
+      - ELASTICSEARCH_URL=http://host.docker.internal:9200
+      - ELASTICSEARCH_HOSTS=http://host.docker.internal:9200
+      - XPACK_MONITORING_ENABLED=true
+      - XPACK_MONITORING_COLLECTION_ENABLED=true
+      # - ELASTIC_USERNAME=elastic
+      # - ELASTIC_PASSWORD=1q2w3e*
+    ports: 
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - pth-network
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - pthredisdata:/data
+    networks:
+      - pth-network
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:4-management
+    restart: always
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - pthrabbitmqdata:/var/lib/rabbitmq
+    networks:
+      - pth-network
+
+volumes:
+  pthpostgresdata:
+  pthpgadmin4data:
+  pthredisdata:
+  pthesdata:
+  pthrabbitmqdata:
+networks:
+  pth-network:
+    name: healthcare-network
+    driver: bridge

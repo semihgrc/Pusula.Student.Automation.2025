@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Pusula.Student.Automation.Blazor.Client": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:61936;http://localhost:61937"
+    }
+  }
+}
