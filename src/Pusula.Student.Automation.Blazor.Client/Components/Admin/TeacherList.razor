@@ -1,0 +1,43 @@
+@using Pusula.Student.Automation.Teachers
+
+<div class="table-responsive">
+    <table class="table table-striped mb-0">
+        <thead>
+        <tr>
+            <th>Ad Soyad</th>
+            <th>E-Posta</th>
+            <th>Telefon</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @if (Items is null || Items.Count == 0)
+        {
+            <tr><td colspan="4" class="text-center text-muted">Kayıt yok</td></tr>
+        }
+        else
+        {
+            @foreach (var teacher in Items)
+            {
+                <tr>
+                    <td>@teacher.Name @teacher.Surname</td>
+                    <td>@teacher.Email</td>
+                    <td>@teacher.PhoneNumber</td>
+                    <td class="text-end">
+                        <button class="btn btn-link btn-sm" @onclick="() => OnShowDetails.InvokeAsync(teacher.Id)">Detay</button>
+                        <button class="btn btn-link btn-sm" @onclick="() => OnEdit.InvokeAsync(teacher.Id)">Düzenle</button>
+                        <button class="btn btn-link btn-sm text-danger" @onclick="() => OnDelete.InvokeAsync(teacher.Id)">Sil</button>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<TeacherDto> Items { get; set; } = Array.Empty<TeacherDto>();
+    [Parameter] public EventCallback<Guid> OnShowDetails { get; set; }
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+}

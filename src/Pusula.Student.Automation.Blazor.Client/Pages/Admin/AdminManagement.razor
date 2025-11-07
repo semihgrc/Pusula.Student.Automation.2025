@@ -1,11 +1,11 @@
 @page "/admin/management"
+@using System.Linq
 @using Microsoft.AspNetCore.Authorization
 @using Pusula.Student.Automation.Authorization
-@using Pusula.Student.Automation.Enums
-@using Pusula.Student.Automation.Teachers
-@using Pusula.Student.Automation.Students
 @using Pusula.Student.Automation.LessonEnrollments
 @using Pusula.Student.Automation.Lessons
+@using Pusula.Student.Automation.Students
+@using Pusula.Student.Automation.Teachers
 @attribute [Authorize(Roles = AutomationRoleNames.Admin)]
 @inherits AutomationComponentBase
 
@@ -15,123 +15,69 @@
     <div class="row g-4">
         <div class="col-12 col-xl-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    Yeni Öğretmen
-                </div>
+                <div class="card-header bg-primary text-white">Yeni Öğretmen</div>
                 <div class="card-body">
-                    <EditForm Model="@NewTeacher" OnValidSubmit="@CreateTeacherAsync">
-                        <Microsoft.AspNetCore.Components.Forms.DataAnnotationsValidator />
-                        <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
-                        @if (!string.IsNullOrEmpty(TeacherFormMessage))
-                        {
-                            <div class="alert alert-info">@TeacherFormMessage</div>
-                        }
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Kullanıcı Adı</label>
-                                <input class="form-control" @bind="NewTeacher.UserName" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Parola</label>
-                                <input class="form-control" type="password" @bind="NewTeacher.Password" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Ad</label>
-                                <input class="form-control" @bind="NewTeacher.Name" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Soyad</label>
-                                <input class="form-control" @bind="NewTeacher.Surname" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Cinsiyet</label>
-                                <select class="form-select" @bind="NewTeacher.Gender">
-                                    @foreach (EnumGender gender in Enum.GetValues(typeof(EnumGender)))
-                                    {
-                                        <option value="@gender">@gender</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Unvan</label>
-                                <input class="form-control" @bind="NewTeacher.Title" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">E-posta</label>
-                                <input class="form-control" type="email" @bind="NewTeacher.Email" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Telefon</label>
-                                <input class="form-control" @bind="NewTeacher.PhoneNumber" />
-                            </div>
-                        </div>
-                        <div class="mt-3 text-end">
-                            <button class="btn btn-primary" type="submit" disabled="@IsSubmittingTeacher">Kaydet</button>
-                        </div>
-                    </EditForm>
+                    <TeacherCreateForm Model="NewTeacher"
+                                       IsSubmitting="IsSubmittingTeacher"
+                                       Message="@TeacherFormMessage"
+                                       OnValidSubmit="CreateTeacherAsync" />
                 </div>
             </div>
         </div>
+
         <div class="col-12 col-xl-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    Yeni Öğrenci
-                </div>
+                <div class="card-header bg-success text-white">Yeni Öğrenci</div>
                 <div class="card-body">
-                    <EditForm Model="@NewStudent" OnValidSubmit="@CreateStudentAsync">
-                        <Microsoft.AspNetCore.Components.Forms.DataAnnotationsValidator />
-                        <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
-                        @if (!string.IsNullOrEmpty(StudentFormMessage))
-                        {
-                            <div class="alert alert-info">@StudentFormMessage</div>
-                        }
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Kullanıcı Adı</label>
-                                <input class="form-control" @bind="NewStudent.UserName" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Parola</label>
-                                <input class="form-control" type="password" @bind="NewStudent.Password" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Ad</label>
-                                <input class="form-control" @bind="NewStudent.Name" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Soyad</label>
-                                <input class="form-control" @bind="NewStudent.Surname" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Cinsiyet</label>
-                                <select class="form-select" @bind="NewStudent.Gender">
-                                    @foreach (EnumGender gender in Enum.GetValues(typeof(EnumGender)))
-                                    {
-                                        <option value="@gender">@gender</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Öğrenci No</label>
-                                <input class="form-control" @bind="NewStudent.StudentNumber" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">E-posta</label>
-                                <input class="form-control" type="email" @bind="NewStudent.Email" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Telefon</label>
-                                <input class="form-control" @bind="NewStudent.PhoneNumber" />
-                            </div>
-                        </div>
-                        <div class="mt-3 text-end">
-                            <button class="btn btn-success" type="submit" disabled="@IsSubmittingStudent">Kaydet</button>
-                        </div>
-                    </EditForm>
+                    <StudentCreateForm Model="NewStudent"
+                                       IsSubmitting="IsSubmittingStudent"
+                                       Message="@StudentFormMessage"
+                                       OnValidSubmit="CreateStudentAsync" />
                 </div>
             </div>
         </div>
     </div>
+
+    @if (TeacherEditInput != null || StudentEditInput != null)
+    {
+        <div class="row g-4 mt-1">
+            @if (TeacherEditInput != null)
+            {
+                <div class="col-12 col-xl-6">
+                    <div class="card shadow-sm h-100 border-primary">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <span>Öğretmen Güncelle</span>
+                            <button class="btn btn-sm btn-link" @onclick="CancelTeacherEdit">Kapat</button>
+                        </div>
+                        <div class="card-body">
+                            <TeacherEditForm Model="TeacherEditInput"
+                                             IsSubmitting="IsUpdatingTeacher"
+                                             OnValidSubmit="UpdateTeacherAsync"
+                                             OnCancel="CancelTeacherEdit" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (StudentEditInput != null)
+            {
+                <div class="col-12 col-xl-6">
+                    <div class="card shadow-sm h-100 border-success">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <span>Öğrenci Güncelle</span>
+                            <button class="btn btn-sm btn-link" @onclick="CancelStudentEdit">Kapat</button>
+                        </div>
+                        <div class="card-body">
+                            <StudentEditForm Model="StudentEditInput"
+                                             IsSubmitting="IsUpdatingStudent"
+                                             OnValidSubmit="UpdateStudentAsync"
+                                             OnCancel="CancelStudentEdit" />
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 
     <div class="row g-4 mt-1">
         <div class="col-12 col-xl-6">
@@ -140,126 +86,22 @@
                     <span>Öğretmenler</span>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="LoadTeachersAsync">Yenile</button>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                        <tr>
-                            <th>Ad Soyad</th>
-                            <th>E-Posta</th>
-                            <th>Telefon</th>
-                            <th></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @if (TeacherItems.Count == 0)
-                        {
-                            <tr><td colspan="4" class="text-center text-muted">Kayıt yok</td></tr>
-                        }
-                        else
-                        {
-                            @foreach (var teacher in TeacherItems)
-                            {
-                                <tr>
-                                    <td>@teacher.Name @teacher.Surname</td>
-                                    <td>@teacher.Email</td>
-                                    <td>@teacher.PhoneNumber</td>
-                                    <td class="text-end">
-                                        <button class="btn btn-link btn-sm" @onclick="() => ShowTeacherDetailsAsync(teacher.Id)">Detay</button>
-                                        <button class="btn btn-link btn-sm text-danger" @onclick="() => DeleteTeacherAsync(teacher.Id)">Sil</button>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        </tbody>
-                    </table>
+                <div class="card-body p-0">
+                    <TeacherList Items="TeacherItems"
+                                 OnShowDetails="ShowTeacherDetailsAsync"
+                                 OnEdit="BeginEditTeacherAsync"
+                                 OnDelete="DeleteTeacherAsync" />
                 </div>
             </div>
 
-            @if (SelectedTeacher != null)
-            {
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header bg-light">
-                        <strong>@SelectedTeacher.Name @SelectedTeacher.Surname</strong> - Dersleri
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <h6>Yeni Ders</h6>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <input class="form-control" placeholder="Ders adı" @bind="NewLesson.Name" />
-                                </div>
-                                <div class="col-md-6">
-                                    <input class="form-control" placeholder="Açıklama" @bind="NewLesson.Description" />
-                                </div>
-                                <div class="col-12 text-end">
-                                    <button class="btn btn-sm btn-primary" @onclick="CreateLessonAsync">Ders Ekle</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead>
-                                <tr>
-                                    <th>Ders</th>
-                                    <th>Durum</th>
-                                    <th>Öğrenciler</th>
-                                    <th style="width: 220px;">Öğrenci Ekle</th>
-                                    <th></th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @if (TeacherLessons.Count == 0)
-                                {
-                                    <tr><td colspan="5" class="text-center text-muted">Ders yok</td></tr>
-                                }
-                                else
-                                {
-                                    @foreach (var lesson in TeacherLessons)
-                                    {
-                                        <tr>
-                                            <td>@lesson.Name</td>
-                                            <td>@lesson.Status</td>
-                                            <td>
-                                                @if (lesson.Enrollments?.Count > 0)
-                                                {
-                                                    <ul class="mb-0">
-                                                        @foreach (var enrollment in lesson.Enrollments)
-                                                        {
-                                                            <li>
-                                                                @enrollment.StudentName - Not: @(enrollment.Grade?.ToString("0.##") ?? "-") (Devamsızlık: @enrollment.AbsenceCount)
-                                                                <button class="btn btn-link btn-sm text-danger" @onclick="() => RemoveStudentFromLessonAsync(lesson.Id, enrollment.StudentId)">Sil</button>
-                                                            </li>
-                                                        }
-                                                    </ul>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">Öğrenci yok</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                <select class="form-select form-select-sm" @onchange="e => OnLessonStudentSelectChanged(lesson.Id, e.Value?.ToString())">
-                                                    <option value="">Öğrenci seç</option>
-                                                    @foreach (var student in StudentItems)
-                                                    {
-                                                        <option value="@student.Id">@student.Name @student.Surname</option>
-                                                    }
-                                                </select>
-                                                <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => AddStudentToLessonAsync(lesson.Id)">Ekle</button>
-                                            </td>
-                                            <td class="text-end">
-                                                <button class="btn btn-link btn-sm text-danger" @onclick="() => DeleteLessonAsync(lesson.Id)">Dersi Sil</button>
-                                            </td>
-                                        </tr>
-                                    }
-                                }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            }
+            <TeacherDetails Teacher="SelectedTeacher"
+                            Lessons="TeacherLessons"
+                            Students="StudentItems"
+                            OnCreateLesson="HandleCreateLessonAsync"
+                            OnDeleteLesson="DeleteLessonAsync"
+                            OnUpdateLesson="HandleUpdateLessonAsync"
+                            OnAddStudent="HandleAddStudentAsync"
+                            OnRemoveStudent="HandleRemoveStudentAsync" />
         </div>
 
         <div class="col-12 col-xl-6">
@@ -268,37 +110,10 @@
                     <span>Öğrenciler</span>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="LoadStudentsAsync">Yenile</button>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                        <tr>
-                            <th>Ad Soyad</th>
-                            <th>E-Posta</th>
-                            <th>Öğrenci No</th>
-                            <th></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @if (StudentItems.Count == 0)
-                        {
-                            <tr><td colspan="4" class="text-center text-muted">Kayıt yok</td></tr>
-                        }
-                        else
-                        {
-                            @foreach (var student in StudentItems)
-                            {
-                                <tr>
-                                    <td>@student.Name @student.Surname</td>
-                                    <td>@student.Email</td>
-                                    <td>@student.StudentNumber</td>
-                                    <td class="text-end">
-                                        <button class="btn btn-link btn-sm text-danger" @onclick="() => DeleteStudentAsync(student.Id)">Sil</button>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        </tbody>
-                    </table>
+                <div class="card-body p-0">
+                    <StudentTable Items="StudentItems"
+                                  OnEdit="BeginEditStudentAsync"
+                                  OnDelete="DeleteStudentAsync" />
                 </div>
             </div>
         </div>
@@ -312,7 +127,6 @@
 
     private TeacherCreateWithIdentityDto NewTeacher { get; set; } = new();
     private StudentCreateWithIdentityDto NewStudent { get; set; } = new();
-    private LessonCreateDto NewLesson { get; set; } = new();
 
     private List<TeacherDto> TeacherItems { get; set; } = new();
     private List<StudentDto> StudentItems { get; set; } = new();
@@ -320,12 +134,18 @@
 
     private TeacherDto? SelectedTeacher { get; set; }
 
-    private readonly Dictionary<Guid, Guid?> _lessonStudentSelections = new();
-
     private bool IsSubmittingTeacher;
     private bool IsSubmittingStudent;
     private string? TeacherFormMessage;
     private string? StudentFormMessage;
+
+    private TeacherUpdateDto? TeacherEditInput;
+    private Guid? EditingTeacherId;
+    private bool IsUpdatingTeacher;
+
+    private StudentUpdateDto? StudentEditInput;
+    private Guid? EditingStudentId;
+    private bool IsUpdatingStudent;
 
     protected override async Task OnInitializedAsync()
     {
@@ -413,6 +233,104 @@
         }
     }
 
+    private async Task BeginEditTeacherAsync(Guid teacherId)
+    {
+        var teacher = await TeacherAppService.GetAsync(teacherId);
+        EditingTeacherId = teacherId;
+        TeacherEditInput = new TeacherUpdateDto
+        {
+            IdentityUserId = teacher.IdentityUserId,
+            Name = teacher.Name,
+            Surname = teacher.Surname,
+            Gender = teacher.Gender,
+            Title = teacher.Title,
+            Email = teacher.Email,
+            PhoneNumber = teacher.PhoneNumber,
+            ConcurrencyStamp = teacher.ConcurrencyStamp
+        };
+    }
+
+    private async Task UpdateTeacherAsync()
+    {
+        if (EditingTeacherId is null || TeacherEditInput is null)
+        {
+            return;
+        }
+
+        IsUpdatingTeacher = true;
+        try
+        {
+            await TeacherAppService.UpdateAsync(EditingTeacherId.Value, TeacherEditInput);
+            await LoadTeachersAsync();
+            if (SelectedTeacher?.Id == EditingTeacherId.Value)
+            {
+                await ShowTeacherDetailsAsync(SelectedTeacher.Id);
+            }
+            CancelTeacherEdit();
+        }
+        catch (Exception ex)
+        {
+            await HandleErrorAsync(ex);
+        }
+        finally
+        {
+            IsUpdatingTeacher = false;
+        }
+    }
+
+    private void CancelTeacherEdit()
+    {
+        TeacherEditInput = null;
+        EditingTeacherId = null;
+    }
+
+    private async Task BeginEditStudentAsync(Guid studentId)
+    {
+        var student = await StudentAppService.GetAsync(studentId);
+        EditingStudentId = studentId;
+        StudentEditInput = new StudentUpdateDto
+        {
+            IdentityUserId = student.IdentityUserId,
+            Name = student.Name,
+            Surname = student.Surname,
+            Gender = student.Gender,
+            Email = student.Email,
+            PhoneNumber = student.PhoneNumber,
+            StudentNumber = student.StudentNumber,
+            ConcurrencyStamp = student.ConcurrencyStamp
+        };
+    }
+
+    private async Task UpdateStudentAsync()
+    {
+        if (EditingStudentId is null || StudentEditInput is null)
+        {
+            return;
+        }
+
+        IsUpdatingStudent = true;
+        try
+        {
+            await StudentAppService.UpdateAsync(EditingStudentId.Value, StudentEditInput);
+            await LoadStudentsAsync();
+            CancelStudentEdit();
+        }
+        catch (Exception ex)
+        {
+            await HandleErrorAsync(ex);
+        }
+        finally
+        {
+            IsUpdatingStudent = false;
+        }
+    }
+
+    private void CancelStudentEdit()
+    {
+        StudentEditInput = null;
+        EditingStudentId = null;
+    }
+
     private async Task DeleteTeacherAsync(Guid teacherId)
     {
         if (!await ConfirmAsync("Öğretmeni silmek istediğinize emin misiniz?")) return;
@@ -436,65 +354,46 @@
             MaxResultCount = 1000
         });
         TeacherLessons = lessonsResult.Items.ToList();
-        foreach (var lesson in TeacherLessons)
-        {
-            if (!_lessonStudentSelections.ContainsKey(lesson.Id))
-            {
-                _lessonStudentSelections[lesson.Id] = null;
-            }
-        }
     }
 
-    private async Task CreateLessonAsync()
+    private async Task HandleCreateLessonAsync(LessonCreateDto input)
     {
-        if (SelectedTeacher == null || string.IsNullOrWhiteSpace(NewLesson.Name))
+        if (SelectedTeacher == null)
         {
             return;
         }
 
-        NewLesson.TeacherId = SelectedTeacher.Id;
-        await LessonAppService.CreateAsync(NewLesson);
-        NewLesson = new LessonCreateDto();
-        await ShowTeacherDetailsAsync(SelectedTeacher.Id);
+        await LessonAppService.CreateAsync(input);
+        await ShowTeacherDetailsAsync(input.TeacherId);
     }
 
-    private void OnLessonStudentSelectChanged(Guid lessonId, string? value)
+    private async Task HandleAddStudentAsync((Guid LessonId, Guid StudentId) payload)
     {
-        if (Guid.TryParse(value, out var parsed))
-        {
-            _lessonStudentSelections[lessonId] = parsed;
-        }
-        else
-        {
-            _lessonStudentSelections[lessonId] = null;
-        }
-    }
-
-    private async Task AddStudentToLessonAsync(Guid lessonId)
-    {
-        if (!_lessonStudentSelections.TryGetValue(lessonId, out var studentId) || studentId is null)
-        {
-            await HandleErrorAsync(new ApplicationException("Lütfen öğrenci seçiniz."));
-            return;
-        }
-
         var input = new LessonEnrollmentCreateDto
         {
-            LessonId = lessonId,
-            StudentId = studentId.Value
+            LessonId = payload.LessonId,
+            StudentId = payload.StudentId
         };
 
         await LessonAppService.AddStudentAsync(input);
-        _lessonStudentSelections[lessonId] = null;
         if (SelectedTeacher != null)
         {
             await ShowTeacherDetailsAsync(SelectedTeacher.Id);
         }
     }
 
-    private async Task RemoveStudentFromLessonAsync(Guid lessonId, Guid studentId)
+    private async Task HandleUpdateLessonAsync((Guid LessonId, LessonUpdateDto Input) payload)
     {
-        await LessonAppService.RemoveStudentAsync(lessonId, studentId);
+        await LessonAppService.UpdateAsync(payload.LessonId, payload.Input);
+        if (SelectedTeacher != null)
+        {
+            await ShowTeacherDetailsAsync(SelectedTeacher.Id);
+        }
+    }
+
+    private async Task HandleRemoveStudentAsync((Guid LessonId, Guid StudentId) payload)
+    {
+        await LessonAppService.RemoveStudentAsync(payload.LessonId, payload.StudentId);
         if (SelectedTeacher != null)
         {
             await ShowTeacherDetailsAsync(SelectedTeacher.Id);

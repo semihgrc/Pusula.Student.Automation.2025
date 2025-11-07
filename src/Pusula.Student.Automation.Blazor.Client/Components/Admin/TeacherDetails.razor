@@ -1,0 +1,239 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Pusula.Student.Automation.Enums
+@using Pusula.Student.Automation.LessonEnrollments
+@using Pusula.Student.Automation.Lessons
+@using Pusula.Student.Automation.Teachers
+@using Pusula.Student.Automation.Students
+
+@if (Teacher is null)
+{
+    <div class="card shadow-sm mt-4">
+        <div class="card-body text-muted">Öğretmen seçiniz.</div>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <strong>@Teacher.Name @Teacher.Surname</strong> - Dersleri
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h6>Yeni Ders</h6>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <input class="form-control" placeholder="Ders adı" @bind="NewLesson.Name" />
+                    </div>
+                    <div class="col-md-6">
+                        <input class="form-control" placeholder="Açıklama" @bind="NewLesson.Description" />
+                    </div>
+                    <div class="col-12 text-end">
+                        <button class="btn btn-sm btn-primary" @onclick="CreateLessonAsync">Ders Ekle</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                    <tr>
+                        <th>Ders</th>
+                        <th>Durum</th>
+                    <th>Öğrenciler</th>
+                    <th style="width: 220px;">Öğrenci Ekle</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                    @if (Lessons == null || Lessons.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-center text-muted">Ders yok</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var lesson in Lessons)
+                        {
+                            <tr>
+                                <td>@lesson.Name</td>
+                                <td>@lesson.Status</td>
+                                <td>
+                                    @if (lesson.Enrollments?.Count > 0)
+                                    {
+                                        <ul class="mb-0">
+                                            @foreach (var enrollment in lesson.Enrollments)
+                                            {
+                                                <li>
+                                                    @enrollment.StudentName - Not: @(enrollment.Grade?.ToString("0.##") ?? "-") (Devamsızlık: @enrollment.AbsenceCount)
+                                                    <button class="btn btn-link btn-sm text-danger" @onclick="() => RemoveStudentFromLessonAsync(lesson.Id, enrollment.StudentId)">Sil</button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Öğrenci yok</span>
+                                    }
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" @onchange="e => OnLessonStudentSelectChanged(lesson.Id, e.Value?.ToString())">
+                                        <option value="">Öğrenci seç</option>
+                                        @if (Students != null)
+                                        {
+                                            @foreach (var student in Students)
+                                            {
+                                                <option value="@student.Id">@student.Name @student.Surname</option>
+                                            }
+                                        }
+                                    </select>
+                                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => AddStudentToLessonAsync(lesson.Id)">Ekle</button>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-link btn-sm" @onclick="() => BeginEditLesson(lesson)">Düzenle</button>
+                                    <button class="btn btn-link btn-sm text-danger" @onclick="() => OnDeleteLesson.InvokeAsync(lesson.Id)">Dersi Sil</button>
+                                </td>
+                            </tr>
+
+                            @if (EditingLessonId == lesson.Id && EditingLesson != null)
+                            {
+                                <tr class="table-light">
+                                    <td colspan="5">
+                                        <EditForm Model="EditingLesson" OnValidSubmit="SaveLessonEditAsync">
+                                            <Microsoft.AspNetCore.Components.Forms.DataAnnotationsValidator />
+                                            <div class="row g-2">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Ders Adı</label>
+                                                    <input class="form-control" @bind="EditingLesson.Name" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Durum</label>
+                                                    <select class="form-select" @bind="EditingLesson.Status">
+                                                        @foreach (LessonStatus status in Enum.GetValues(typeof(LessonStatus)))
+                                                        {
+                                                            <option value="@status">@status</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Açıklama</label>
+                                                    <input class="form-control" @bind="EditingLesson.Description" />
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 d-flex justify-content-between">
+                                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelLessonEdit">İptal</button>
+                                                <button class="btn btn-primary ms-auto" type="submit" disabled="@IsLessonUpdating">Kaydet</button>
+                                            </div>
+                                        </EditForm>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public TeacherDto? Teacher { get; set; }
+    [Parameter] public IReadOnlyList<LessonDto> Lessons { get; set; } = Array.Empty<LessonDto>();
+    [Parameter] public IReadOnlyList<StudentDto> Students { get; set; } = Array.Empty<StudentDto>();
+    [Parameter] public EventCallback<LessonCreateDto> OnCreateLesson { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeleteLesson { get; set; }
+    [Parameter] public EventCallback<(Guid LessonId, Guid StudentId)> OnAddStudent { get; set; }
+    [Parameter] public EventCallback<(Guid LessonId, Guid StudentId)> OnRemoveStudent { get; set; }
+    [Parameter] public EventCallback<(Guid LessonId, LessonUpdateDto Input)> OnUpdateLesson { get; set; }
+
+    private LessonCreateDto NewLesson { get; set; } = new();
+    private readonly Dictionary<Guid, Guid?> _lessonStudentSelections = new();
+    private Guid? EditingLessonId;
+    private LessonUpdateDto? EditingLesson;
+    private bool IsLessonUpdating;
+
+    protected override void OnParametersSet()
+    {
+        if (Teacher != null)
+        {
+            NewLesson.TeacherId = Teacher.Id;
+        }
+    }
+
+    private async Task CreateLessonAsync()
+    {
+        if (Teacher == null)
+        {
+            return;
+        }
+
+        NewLesson.TeacherId = Teacher.Id;
+        await OnCreateLesson.InvokeAsync(NewLesson);
+        NewLesson = new LessonCreateDto { TeacherId = Teacher.Id };
+    }
+
+    private void OnLessonStudentSelectChanged(Guid lessonId, string? value)
+    {
+        if (Guid.TryParse(value, out var parsed))
+        {
+            _lessonStudentSelections[lessonId] = parsed;
+        }
+        else
+        {
+            _lessonStudentSelections[lessonId] = null;
+        }
+    }
+
+    private async Task AddStudentToLessonAsync(Guid lessonId)
+    {
+        if (!_lessonStudentSelections.TryGetValue(lessonId, out var studentId) || studentId is null)
+        {
+            return;
+        }
+
+        await OnAddStudent.InvokeAsync((lessonId, studentId.Value));
+        _lessonStudentSelections[lessonId] = null;
+    }
+
+    private Task RemoveStudentFromLessonAsync(Guid lessonId, Guid studentId)
+    {
+        return OnRemoveStudent.InvokeAsync((lessonId, studentId));
+    }
+
+    private void BeginEditLesson(LessonDto lesson)
+    {
+        EditingLessonId = lesson.Id;
+        EditingLesson = new LessonUpdateDto
+        {
+            TeacherId = lesson.TeacherId,
+            Name = lesson.Name,
+            Description = lesson.Description,
+            Status = lesson.Status,
+            ConcurrencyStamp = lesson.ConcurrencyStamp
+        };
+    }
+
+    private void CancelLessonEdit()
+    {
+        EditingLessonId = null;
+        EditingLesson = null;
+    }
+
+    private async Task SaveLessonEditAsync()
+    {
+        if (EditingLessonId is null || EditingLesson is null)
+        {
+            return;
+        }
+
+        IsLessonUpdating = true;
+        try
+        {
+            await OnUpdateLesson.InvokeAsync((EditingLessonId.Value, EditingLesson));
+            CancelLessonEdit();
+        }
+        finally
+        {
+            IsLessonUpdating = false;
+        }
+    }
+}

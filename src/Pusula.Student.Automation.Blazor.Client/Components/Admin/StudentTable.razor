@@ -1,0 +1,41 @@
+@using Pusula.Student.Automation.Students
+
+<div class="table-responsive">
+    <table class="table table-striped mb-0">
+        <thead>
+        <tr>
+            <th>Ad Soyad</th>
+            <th>E-Posta</th>
+            <th>Öğrenci No</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @if (Items is null || Items.Count == 0)
+        {
+            <tr><td colspan="4" class="text-center text-muted">Kayıt yok</td></tr>
+        }
+        else
+        {
+            @foreach (var student in Items)
+            {
+                <tr>
+                    <td>@student.Name @student.Surname</td>
+                    <td>@student.Email</td>
+                    <td>@student.StudentNumber</td>
+                    <td class="text-end">
+                        <button class="btn btn-link btn-sm" @onclick="() => OnEdit.InvokeAsync(student.Id)">Düzenle</button>
+                        <button class="btn btn-link btn-sm text-danger" @onclick="() => OnDelete.InvokeAsync(student.Id)">Sil</button>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<StudentDto> Items { get; set; } = Array.Empty<StudentDto>();
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+}
