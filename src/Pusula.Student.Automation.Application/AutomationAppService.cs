@@ -14,4 +14,9 @@ public abstract class AutomationAppService : ApplicationService
     {
         LocalizationResource = typeof(AutomationResource);
     }
+
+    protected static string? NormalizeConcurrencyStamp(string? concurrencyStamp)
+    {
+        return string.IsNullOrWhiteSpace(concurrencyStamp) ? null : concurrencyStamp;
+    }
 }

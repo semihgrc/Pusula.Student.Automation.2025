@@ -1,9 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Pusula.Student.Automation;
+using Pusula.Student.Automation.LessonEnrollments;
+using Pusula.Student.Automation.Lessons;
+using Pusula.Student.Automation.Students;
+using Pusula.Student.Automation.Teachers;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EntityFrameworkCore;
+using Volo.Abp.EntityFrameworkCore.Modeling;
 using Volo.Abp.FeatureManagement.EntityFrameworkCore;
 using Volo.Abp.Identity;
 using Volo.Abp.Identity.EntityFrameworkCore;
@@ -12,6 +18,7 @@ using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
+using StudentEntity = Pusula.Student.Automation.Students.Student;
 
 namespace Pusula.Student.Automation.EntityFrameworkCore;
 
@@ -23,7 +30,10 @@ public class AutomationDbContext :
     IIdentityDbContext,
     ITenantManagementDbContext
 {
-    /* Add DbSet properties for your Aggregate Roots / Entities here. */
+    public DbSet<Teacher> Teachers { get; set; }
+    public DbSet<StudentEntity> Students { get; set; }
+    public DbSet<Lesson> Lessons { get; set; }
+    public DbSet<LessonEnrollment> LessonEnrollments { get; set; }
 
     #region Entities from the modules
 
@@ -76,11 +86,68 @@ public class AutomationDbContext :
 
         /* Configure your own tables/entities inside here */
 
-        //builder.Entity<YourEntity>(b =>
-        //{
-        //    b.ToTable(AutomationConsts.DbTablePrefix + "YourEntities", AutomationConsts.DbSchema);
-        //    b.ConfigureByConvention(); //auto configure for the base class props
-        //    //...
-        //});
+        builder.Entity<Teacher>(b =>
+        {
+            b.ToTable(AutomationConsts.DbTablePrefix + "Teachers", AutomationConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.IdentityUserId).IsRequired();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(TeacherConsts.MaxNameLength);
+            b.Property(x => x.Surname).IsRequired().HasMaxLength(TeacherConsts.MaxSurnameLength);
+            b.Property(x => x.Title).IsRequired().HasMaxLength(TeacherConsts.MaxTitleLength);
+            b.Property(x => x.Email).IsRequired().HasMaxLength(TeacherConsts.MaxEmailLength);
+            b.Property(x => x.PhoneNumber).IsRequired().HasMaxLength(TeacherConsts.MaxPhoneNumberLength);
+            b.HasIndex(x => x.Email).IsUnique();
+            b.HasIndex(x => x.IdentityUserId).IsUnique();
+        });
+
+        builder.Entity<StudentEntity>(b =>
+        {
+            b.ToTable(AutomationConsts.DbTablePrefix + "Students", AutomationConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.IdentityUserId).IsRequired();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(StudentConsts.MaxNameLength);
+            b.Property(x => x.Surname).IsRequired().HasMaxLength(StudentConsts.MaxSurnameLength);
+            b.Property(x => x.Email).IsRequired().HasMaxLength(StudentConsts.MaxEmailLength);
+            b.Property(x => x.PhoneNumber).IsRequired().HasMaxLength(StudentConsts.MaxPhoneNumberLength);
+            b.Property(x => x.StudentNumber).IsRequired().HasMaxLength(StudentConsts.MaxStudentNumberLength);
+            b.HasIndex(x => x.Email).IsUnique();
+            b.HasIndex(x => x.StudentNumber).IsUnique();
+            b.HasIndex(x => x.IdentityUserId).IsUnique();
+        });
+
+        builder.Entity<Lesson>(b =>
+        {
+            b.ToTable(AutomationConsts.DbTablePrefix + "Lessons", AutomationConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(LessonConsts.MaxNameLength);
+            b.Property(x => x.Description).HasMaxLength(LessonConsts.MaxDescriptionLength);
+            b.Property(x => x.Status).IsRequired();
+
+            b.HasOne(x => x.Teacher)
+                .WithMany()
+                .HasForeignKey(x => x.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<LessonEnrollment>(b =>
+        {
+            b.ToTable(AutomationConsts.DbTablePrefix + "LessonEnrollments", AutomationConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.TeacherComment).HasMaxLength(LessonEnrollmentConsts.MaxTeacherCommentLength);
+            b.Property(x => x.Grade).HasPrecision(5, 2);
+            b.Property(x => x.AbsenceCount).IsRequired();
+
+            b.HasOne(x => x.Lesson)
+                .WithMany(l => l.Enrollments)
+                .HasForeignKey(x => x.LessonId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.Student)
+                .WithMany()
+                .HasForeignKey(x => x.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasIndex(x => new { x.LessonId, x.StudentId }).IsUnique();
+        });
     }
 }

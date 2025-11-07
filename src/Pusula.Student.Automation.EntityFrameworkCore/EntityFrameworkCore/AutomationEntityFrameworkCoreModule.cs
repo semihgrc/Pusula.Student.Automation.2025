@@ -1,5 +1,13 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Pusula.Student.Automation.EntityFrameworkCore.LessonEnrollments;
+using Pusula.Student.Automation.EntityFrameworkCore.Lessons;
+using Pusula.Student.Automation.EntityFrameworkCore.Students;
+using Pusula.Student.Automation.EntityFrameworkCore.Teachers;
+using Pusula.Student.Automation.LessonEnrollments;
+using Pusula.Student.Automation.Lessons;
+using Pusula.Student.Automation.Students;
+using Pusula.Student.Automation.Teachers;
 using Volo.Abp.Uow;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -12,6 +20,7 @@ using Volo.Abp.OpenIddict.EntityFrameworkCore;
 using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
+using StudentEntity = Pusula.Student.Automation.Students.Student;
 
 namespace Pusula.Student.Automation.EntityFrameworkCore;
 
@@ -44,6 +53,10 @@ public class AutomationEntityFrameworkCoreModule : AbpModule
                 /* Remove "includeAllEntities: true" to create
                  * default repositories only for aggregate roots */
             options.AddDefaultRepositories(includeAllEntities: true);
+            options.AddRepository<Teacher, EfCoreTeacherRepository>();
+            options.AddRepository<StudentEntity, EfCoreStudentRepository>();
+            options.AddRepository<Lesson, EfCoreLessonRepository>();
+            options.AddRepository<LessonEnrollment, EfCoreLessonEnrollmentRepository>();
         });
 
         Configure<AbpDbContextOptions>(options =>

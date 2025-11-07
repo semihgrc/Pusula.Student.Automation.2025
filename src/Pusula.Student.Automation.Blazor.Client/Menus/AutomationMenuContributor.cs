@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Pusula.Student.Automation.Authorization;
 using Pusula.Student.Automation.Localization;
 using Pusula.Student.Automation.MultiTenancy;
 using Volo.Abp.Account.Localization;
@@ -44,6 +45,16 @@ public class AutomationMenuContributor : IMenuContributor
                 l["Menu:Home"],
                 "/",
                 icon: "fas fa-home"
+            )
+        );
+
+        context.Menu.Items.Insert(
+            1,
+            new ApplicationMenuItem(
+                "Automation.AdminManagement",
+                "Yönetim Paneli",
+                "/admin/management",
+                icon: "fas fa-user-gear"
             )
         );
 
