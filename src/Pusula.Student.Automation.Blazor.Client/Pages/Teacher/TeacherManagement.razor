@@ -155,6 +155,14 @@
                         disabled="@IsSavingAttendance">
                     @(IsSavingAttendance ? "Kaydediliyor..." : "Raporu Kaydet")
                 </button>
+                @if (SelectedDailyReport != null)
+                {
+                    <button class="btn btn-outline-danger btn-sm"
+                            @onclick="DeleteDailyReportAsync"
+                            disabled="@(IsDeletingReport || IsSavingAttendance)">
+                        @(IsDeletingReport ? "Siliniyor..." : "Raporu Sil")
+                    </button>
+                }
                 <small class="text-muted">Varsayılan not 75, durum "Geldi" olarak gelir.</small>
             </div>
             <div class="card-body">
@@ -281,6 +289,7 @@
     private LessonDailyReportDto? SelectedDailyReport;
     private bool IsLoadingAttendance;
     private bool IsSavingAttendance;
+    private bool IsDeletingReport;
 
     private string? AlertMessage;
 
@@ -335,6 +344,7 @@
             {
                 var stillExists = Lessons.FirstOrDefault(l => l.Id == SelectedLesson.Id);
                 SelectedLesson = stillExists;
+                FilterStudentSearchResults();
             }
         }
         finally
@@ -346,6 +356,7 @@
     private async Task SelectLessonAsync(Guid lessonId)
     {
         SelectedLesson = await LessonAppService.GetAsync(lessonId);
+        FilterStudentSearchResults();
         SelectedAttendanceDate = DateTime.Today;
         await LoadDailyReportSummariesAsync();
         await LoadAttendanceAsync();
@@ -382,6 +393,7 @@
         }
 
         SelectedLesson = await LessonAppService.GetAsync(SelectedLesson.Id);
+        FilterStudentSearchResults();
     }
 
     private async Task CreateStudentAsync()
@@ -496,15 +508,7 @@
         IsLoadingAttendance = true;
         try
         {
-            LessonDailyReportDto? report = null;
-            try
-            {
-                report = await LessonAppService.GetDailyReportAsync(SelectedLesson.Id, SelectedAttendanceDate);
-            }
-            catch (BusinessException ex) when (ex.Code == AutomationDomainErrorCodes.LessonDailyReportNotFound)
-            {
-                report = null;
-            }
+            var report = await LessonAppService.GetDailyReportAsync(SelectedLesson.Id, SelectedAttendanceDate);
 
             if (report != null)
             {
@@ -602,6 +606,33 @@
         finally
         {
             IsSavingAttendance = false;
+        }
+    }
+
+    private async Task DeleteDailyReportAsync()
+    {
+        if (!CanManageSelectedLesson || SelectedLesson == null || SelectedDailyReport == null)
+        {
+            SetAlert("Silinecek rapor bulunamadı.");
+            return;
+        }
+
+        IsDeletingReport = true;
+        try
+        {
+            await LessonAppService.DeleteDailyReportAsync(SelectedDailyReport.Id);
+            SelectedDailyReport = null;
+            await LoadDailyReportSummariesAsync();
+            await LoadAttendanceAsync();
+            SetAlert("Rapor silindi.");
+        }
+        catch (BusinessException ex)
+        {
+            SetAlert(ex.Message);
+        }
+        finally
+        {
+            IsDeletingReport = false;
         }
     }
 

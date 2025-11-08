@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Pusula.Student.Automation.Enums;
 using Pusula.Student.Automation;
+using Pusula.Student.Automation.Enums;
 using Pusula.Student.Automation.GlobalExceptions;
 using Pusula.Student.Automation.LessonEnrollments;
 using Pusula.Student.Automation.Students;
@@ -108,17 +108,32 @@ public class LessonManager : DomainService
         await EnsureLessonExistsAsync(lessonId, cancellationToken);
         await EnsureStudentExistsAsync(studentId, cancellationToken);
 
-        var existingEnrollment = await _lessonEnrollmentRepository.FindAsync(lessonId, studentId, cancellationToken);
-        _automationException.ThrowIf(
-            existingEnrollment != null,
-            AutomationDomainErrorCodes.LessonAlreadyHasStudent,
-            "Student already assigned to this lesson.");
+        var existingEnrollment = await _lessonEnrollmentRepository.FindIncludingDeletedAsync(lessonId, studentId, cancellationToken);
+        if (existingEnrollment != null)
+        {
+            if (existingEnrollment.IsDeleted)
+            {
+                existingEnrollment.IsDeleted = false;
+                existingEnrollment.DeleterId = null;
+                existingEnrollment.DeletionTime = null;
+                existingEnrollment.SetGrade(null);
+                existingEnrollment.SetMidtermGrade(null);
+                existingEnrollment.SetFinalGrade(null);
+                existingEnrollment.SetTeacherComment(null);
+                existingEnrollment.SetAbsenceCount(LessonEnrollmentConsts.MinAbsenceCount);
+
+                return await _lessonEnrollmentRepository.UpdateAsync(existingEnrollment, true, cancellationToken);
+            }
+
+            _automationException.Throw(
+                AutomationDomainErrorCodes.LessonAlreadyHasStudent,
+                "Student already assigned to this lesson.");
+        }
 
         var enrollment = new LessonEnrollment(GuidGenerator.Create(), lessonId, studentId);
 
         return await _lessonEnrollmentRepository.InsertAsync(enrollment, true, cancellationToken);
     }
-
     public virtual async Task RemoveStudentAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken = default)
     {
         var enrollment = await GetEnrollmentAsync(lessonId, studentId, cancellationToken);

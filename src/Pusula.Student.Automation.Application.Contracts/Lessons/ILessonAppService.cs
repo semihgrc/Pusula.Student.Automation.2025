@@ -37,7 +37,7 @@ public interface ILessonAppService : IApplicationService
 
     Task<List<LessonDailyReportSummaryDto>> GetDailyReportsAsync(Guid lessonId, CancellationToken cancellationToken = default);
 
-    Task<LessonDailyReportDto> GetDailyReportAsync(Guid lessonId, DateTime date, CancellationToken cancellationToken = default);
+    Task<LessonDailyReportDto?> GetDailyReportAsync(Guid lessonId, DateTime date, CancellationToken cancellationToken = default);
 
     Task<LessonDailyReportDto> SaveDailyReportAsync(LessonDailyReportSaveDto input, CancellationToken cancellationToken = default);
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Entities.Auditing;
 
@@ -9,14 +8,12 @@ namespace Pusula.Student.Automation.LessonDailyReports;
 
 public class LessonDailyReport : FullAuditedAggregateRoot<Guid>, IHasConcurrencyStamp
 {
-    private readonly List<LessonDailyReportEntry> _entries = new();
-
     public Guid LessonId { get; private set; }
     public Guid TeacherId { get; private set; }
     public DateTime Date { get; private set; }
     public override string ConcurrencyStamp { get; set; } = string.Empty;
 
-    public IReadOnlyCollection<LessonDailyReportEntry> Entries => _entries.AsReadOnly();
+    public virtual ICollection<LessonDailyReportEntry> Entries { get; private set; } = new List<LessonDailyReportEntry>();
 
     protected LessonDailyReport()
     {
@@ -41,12 +38,35 @@ public class LessonDailyReport : FullAuditedAggregateRoot<Guid>, IHasConcurrency
 
     public void ReplaceEntries(IEnumerable<LessonDailyReportEntry> entries)
     {
-        _entries.Clear();
-        _entries.AddRange(entries);
+        Entries.Clear();
+        foreach (var entry in entries)
+        {
+            Entries.Add(entry);
+        }
+    }
+
+    public void AddEntry(LessonDailyReportEntry entry)
+    {
+        var existingEntry = Entries.FirstOrDefault(x => x.Id == entry.Id || x.StudentId == entry.StudentId);
+        if (existingEntry != null)
+        {
+            Entries.Remove(existingEntry);
+        }
+
+        Entries.Add(entry);
+    }
+
+    public void RemoveEntry(Guid entryId)
+    {
+        var existingEntry = Entries.FirstOrDefault(x => x.Id == entryId);
+        if (existingEntry != null)
+        {
+            Entries.Remove(existingEntry);
+        }
     }
 
     public LessonDailyReportEntry? FindEntry(Guid studentId)
     {
-        return _entries.FirstOrDefault(x => x.StudentId == studentId);
+        return Entries.FirstOrDefault(x => x.StudentId == studentId);
     }
 }

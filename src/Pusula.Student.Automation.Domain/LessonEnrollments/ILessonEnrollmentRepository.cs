@@ -10,6 +10,8 @@ public interface ILessonEnrollmentRepository : IRepository<LessonEnrollment, Gui
 {
     Task<LessonEnrollment?> FindAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken = default);
 
+    Task<LessonEnrollment?> FindIncludingDeletedAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken = default);
+
     Task<List<LessonEnrollment>> GetByLessonAsync(Guid lessonId, CancellationToken cancellationToken = default);
 
     Task<List<LessonEnrollment>> GetByStudentAsync(Guid studentId, CancellationToken cancellationToken = default);

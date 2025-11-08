@@ -20,11 +20,35 @@ public class EfCoreLessonDailyReportRepository
     {
     }
 
+    public async Task<LessonDailyReport> GetWithDetailsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var dbSet = await GetDbSetAsync();
+        return await dbSet
+            .Include(r => r.Entries)
+            .FirstAsync(r => r.Id == id, cancellationToken);
+    }
+
     public async Task<LessonDailyReport?> FindByLessonAndDateAsync(Guid lessonId, DateTime date, bool includeDetails = true, CancellationToken cancellationToken = default)
     {
         date = date.Date;
 
         var dbSet = await GetDbSetAsync();
+
+        var query = dbSet.Where(report => report.LessonId == lessonId && report.Date == date);
+
+        if (includeDetails)
+        {
+            query = query.Include(r => r.Entries);
+        }
+
+        return await query.FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<LessonDailyReport?> FindByLessonAndDateIncludingDeletedAsync(Guid lessonId, DateTime date, bool includeDetails = true, CancellationToken cancellationToken = default)
+    {
+        date = date.Date;
+
+        var dbSet = (await GetDbSetAsync()).IgnoreQueryFilters();
 
         var query = dbSet.Where(report => report.LessonId == lessonId && report.Date == date);
 

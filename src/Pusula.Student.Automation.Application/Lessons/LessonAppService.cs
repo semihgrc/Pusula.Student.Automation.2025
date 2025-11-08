@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pusula.Student.Automation.Authorization;
 using Pusula.Student.Automation.LessonDailyReports;
 using Pusula.Student.Automation.LessonEnrollments;
@@ -113,18 +115,28 @@ public class LessonAppService : AutomationAppService, ILessonAppService
 
     public virtual async Task<LessonEnrollmentDto> AddStudentAsync(LessonEnrollmentCreateDto input, CancellationToken cancellationToken = default)
     {
-        var enrollment = await _lessonManager.AddStudentAsync(input.LessonId, input.StudentId, cancellationToken);
-        var detailedEnrollment = await _lessonEnrollmentRepository.GetAsync(
-            enrollment.Id,
-            includeDetails: true,
-            cancellationToken: cancellationToken);
+        try
+        {
+            var enrollment = await _lessonManager.AddStudentAsync(input.LessonId, input.StudentId, cancellationToken);
+            var detailedEnrollment = await _lessonEnrollmentRepository.GetAsync(
+                enrollment.Id,
+                includeDetails: true,
+                cancellationToken: cancellationToken);
 
-        return ObjectMapper.Map<LessonEnrollment, LessonEnrollmentDto>(detailedEnrollment);
+            return ObjectMapper.Map<LessonEnrollment, LessonEnrollmentDto>(detailedEnrollment);
+        }
+        catch (DbUpdateException ex) when (IsDuplicateLessonEnrollmentException(ex))
+        {
+            throw new BusinessException(AutomationDomainErrorCodes.LessonAlreadyHasStudent)
+                .WithData(nameof(input.LessonId), input.LessonId)
+                .WithData(nameof(input.StudentId), input.StudentId);
+        }
     }
 
     public virtual async Task RemoveStudentAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken = default)
     {
         await _lessonManager.RemoveStudentAsync(lessonId, studentId, cancellationToken);
+        await RemoveStudentReportEntriesAsync(lessonId, studentId, cancellationToken);
     }
 
     public virtual async Task<LessonEnrollmentDto> UpdateEnrollmentAsync(
@@ -180,19 +192,21 @@ public class LessonAppService : AutomationAppService, ILessonAppService
             .ToList();
     }
 
-    public virtual async Task<LessonDailyReportDto> GetDailyReportAsync(Guid lessonId, DateTime date, CancellationToken cancellationToken = default)
+    public virtual async Task<LessonDailyReportDto?> GetDailyReportAsync(Guid lessonId, DateTime date, CancellationToken cancellationToken = default)
     {
-        var report = await _lessonDailyReportRepository.FindByLessonAndDateAsync(lessonId, date, includeDetails: true, cancellationToken: cancellationToken);
+        var report = await _lessonDailyReportRepository.FindByLessonAndDateAsync(
+            lessonId,
+            date,
+            includeDetails: true,
+            cancellationToken: cancellationToken);
+
         if (report == null)
         {
-            throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportNotFound)
-                .WithData(nameof(lessonId), lessonId)
-                .WithData(nameof(date), date.ToShortDateString());
+            return null;
         }
 
         return await MapDailyReportAsync(report, cancellationToken);
     }
-
     public virtual async Task<LessonDailyReportDto> SaveDailyReportAsync(LessonDailyReportSaveDto input, CancellationToken cancellationToken = default)
     {
         if (input.Entries == null || input.Entries.Count == 0)
@@ -218,51 +232,73 @@ public class LessonAppService : AutomationAppService, ILessonAppService
         LessonDailyReport? report = null;
         if (input.ReportId.HasValue)
         {
-            report = await _lessonDailyReportRepository.GetAsync(input.ReportId.Value, includeDetails: true, cancellationToken: cancellationToken);
+            report = await _lessonDailyReportRepository.GetWithDetailsAsync(
+                input.ReportId.Value,
+                cancellationToken: cancellationToken);
+
             if (report.LessonId != input.LessonId)
             {
                 throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportNotFound)
                     .WithData(nameof(input.ReportId), input.ReportId);
             }
+
             report.SetDate(input.Date);
             report.SetTeacher(lesson.TeacherId);
+            ApplyDailyReportEntries(report, input);
+
+            await _lessonDailyReportRepository.UpdateAsync(report, autoSave: true, cancellationToken);
         }
         else
         {
-            var existingReport = await _lessonDailyReportRepository.FindByLessonAndDateAsync(input.LessonId, input.Date, includeDetails: false, cancellationToken: cancellationToken);
+            var existingReport = await _lessonDailyReportRepository.FindByLessonAndDateAsync(
+                input.LessonId,
+                input.Date,
+                includeDetails: false,
+                cancellationToken: cancellationToken);
+
             if (existingReport != null)
             {
                 throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportAlreadyExists)
                     .WithData(nameof(input.Date), input.Date.ToShortDateString());
             }
 
-            report = new LessonDailyReport(GuidGenerator.Create(), input.LessonId, lesson.TeacherId, input.Date);
+            var deletedReport = await _lessonDailyReportRepository.FindByLessonAndDateIncludingDeletedAsync(
+                input.LessonId,
+                input.Date,
+                includeDetails: true,
+                cancellationToken: cancellationToken);
+
+            if (deletedReport != null && deletedReport.IsDeleted)
+            {
+                deletedReport.IsDeleted = false;
+                deletedReport.DeleterId = null;
+                deletedReport.DeletionTime = null;
+                deletedReport.SetDate(input.Date);
+                deletedReport.SetTeacher(lesson.TeacherId);
+
+                var entryEntities = input.Entries
+                    .Select(entry => CreateDailyReportEntry(deletedReport.Id, input.LessonId, entry))
+                    .ToList();
+
+                deletedReport.ReplaceEntries(entryEntities);
+
+                report = await _lessonDailyReportRepository.UpdateAsync(deletedReport, autoSave: true, cancellationToken);
+            }
+            else
+            {
+                report = new LessonDailyReport(GuidGenerator.Create(), input.LessonId, lesson.TeacherId, input.Date);
+
+                var entryEntities = input.Entries
+                    .Select(entry => CreateDailyReportEntry(report!.Id, input.LessonId, entry))
+                    .ToList();
+
+                report.ReplaceEntries(entryEntities);
+
+                await _lessonDailyReportRepository.InsertAsync(report, autoSave: true, cancellationToken);
+            }
         }
 
-        var entryEntities = input.Entries
-            .Select(entry =>
-                new LessonDailyReportEntry(
-                    entry.EntryId ?? GuidGenerator.Create(),
-                    report!.Id,
-                    input.LessonId,
-                    entry.StudentId,
-                    entry.IsPresent,
-                    entry.DailyGrade,
-                    entry.DailyComment))
-            .ToList();
-
-        report.ReplaceEntries(entryEntities);
-
-        if (input.ReportId.HasValue)
-        {
-            await _lessonDailyReportRepository.UpdateAsync(report, autoSave: true, cancellationToken);
-        }
-        else
-        {
-            await _lessonDailyReportRepository.InsertAsync(report, autoSave: true, cancellationToken);
-        }
-
-        return await MapDailyReportAsync(report, cancellationToken);
+        return await MapDailyReportAsync(report!, cancellationToken);
     }
 
     public virtual async Task DeleteDailyReportAsync(Guid reportId, CancellationToken cancellationToken = default)
@@ -322,5 +358,95 @@ public class LessonAppService : AutomationAppService, ILessonAppService
 
         dto.Entries = entryDtos.OrderBy(e => e.StudentName).ToList();
         return dto;
+    }
+
+    private LessonDailyReportEntry CreateDailyReportEntry(Guid reportId, Guid lessonId, LessonDailyReportEntrySaveDto entry)
+    {
+        return new LessonDailyReportEntry(
+            entry.EntryId ?? GuidGenerator.Create(),
+            reportId,
+            lessonId,
+            entry.StudentId,
+            entry.IsPresent,
+            entry.DailyGrade,
+            entry.DailyComment);
+    }
+
+    private void ApplyDailyReportEntries(LessonDailyReport report, LessonDailyReportSaveDto input)
+    {
+        var processedEntryIds = new HashSet<Guid>();
+        var entriesById = report.Entries.ToDictionary(e => e.Id);
+        var entriesByStudent = report.Entries.ToDictionary(e => e.StudentId);
+
+        foreach (var entry in input.Entries)
+        {
+            LessonDailyReportEntry? target = null;
+
+            if (entry.EntryId.HasValue && entriesById.TryGetValue(entry.EntryId.Value, out var byId))
+            {
+                target = byId;
+            }
+            else if (entriesByStudent.TryGetValue(entry.StudentId, out var byStudent))
+            {
+                target = byStudent;
+            }
+
+            if (target != null)
+            {
+                target.Update(entry.IsPresent, entry.DailyGrade, entry.DailyComment);
+                processedEntryIds.Add(target.Id);
+            }
+            else
+            {
+                var newEntry = CreateDailyReportEntry(report.Id, report.LessonId, entry);
+                report.AddEntry(newEntry);
+                processedEntryIds.Add(newEntry.Id);
+            }
+        }
+
+        var entriesToRemove = report.Entries
+            .Where(e => !processedEntryIds.Contains(e.Id))
+            .Select(e => e.Id)
+            .ToList();
+
+        foreach (var entryId in entriesToRemove)
+        {
+            report.RemoveEntry(entryId);
+        }
+    }
+
+    private async Task RemoveStudentReportEntriesAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken)
+    {
+        var reports = await _lessonDailyReportRepository.GetListByLessonAsync(lessonId, cancellationToken);
+        var reportsToUpdate = new List<LessonDailyReport>();
+
+        foreach (var report in reports)
+        {
+            var entry = report.Entries.FirstOrDefault(e => e.StudentId == studentId);
+            if (entry != null)
+            {
+                report.RemoveEntry(entry.Id);
+                reportsToUpdate.Add(report);
+            }
+        }
+
+        foreach (var report in reportsToUpdate)
+        {
+            await _lessonDailyReportRepository.UpdateAsync(report, autoSave: true, cancellationToken);
+        }
+    }
+
+    private static bool IsDuplicateLessonEnrollmentException(DbUpdateException exception)
+    {
+        if (exception.InnerException is PostgresException postgresException)
+        {
+            return postgresException.SqlState == PostgresErrorCodes.UniqueViolation
+                   && string.Equals(
+                       postgresException.ConstraintName,
+                       "IX_AppLessonEnrollments_LessonId_StudentId",
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
     }
 }

@@ -27,6 +27,16 @@ public class EfCoreLessonEnrollmentRepository
             cancellationToken);
     }
 
+    public async Task<LessonEnrollment?> FindIncludingDeletedAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken = default)
+    {
+        var queryable = (await GetQueryableWithDetailsAsync())
+            .IgnoreQueryFilters();
+
+        return await queryable.FirstOrDefaultAsync(
+            e => e.LessonId == lessonId && e.StudentId == studentId,
+            cancellationToken);
+    }
+
     public async Task<List<LessonEnrollment>> GetByLessonAsync(Guid lessonId, CancellationToken cancellationToken = default)
     {
         var queryable = await GetQueryableWithDetailsAsync();
