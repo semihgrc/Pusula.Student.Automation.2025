@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using Pusula.Student.Automation.Authorization;
-using Pusula.Student.Automation.Localization;
+using Volo.Abp;
 using Pusula.Student.Automation.MultiTenancy;
-using Volo.Abp.Account.Localization;
 using Volo.Abp.Authorization.Permissions;
+using Volo.Abp.Account.Localization;
 using Volo.Abp.Identity.Blazor;
 using Volo.Abp.SettingManagement.Blazor.Menus;
 using Volo.Abp.TenantManagement.Blazor.Navigation;
@@ -36,23 +35,11 @@ public class AutomationMenuContributor : IMenuContributor
 
     private Task ConfigureMainMenuAsync(MenuConfigurationContext context)
     {
-        var l = context.GetLocalizer<AutomationResource>();
-
         context.Menu.Items.Insert(
             0,
             new ApplicationMenuItem(
-                AutomationMenus.Home,
-                l["Menu:Home"],
-                "/",
-                icon: "fas fa-home"
-            )
-        );
-
-        context.Menu.Items.Insert(
-            1,
-            new ApplicationMenuItem(
                 "Automation.AdminManagement",
-                "Yönetim Paneli",
+                "Yonetim Paneli",
                 "/admin/management",
                 icon: "fas fa-user-gear"
             )
@@ -82,7 +69,7 @@ public class AutomationMenuContributor : IMenuContributor
             return Task.CompletedTask;
         }
 
-        var authServerUrl = _configuration["AuthServer:Authority"] ?? "";
+        var authServerUrl = _configuration["AuthServer:Authority"] ?? string.Empty;
         var accountStringLocalizer = context.GetLocalizer<AccountResource>();
 
         context.Menu.AddItem(new ApplicationMenuItem(
@@ -97,3 +84,5 @@ public class AutomationMenuContributor : IMenuContributor
         return Task.CompletedTask;
     }
 }
+
+

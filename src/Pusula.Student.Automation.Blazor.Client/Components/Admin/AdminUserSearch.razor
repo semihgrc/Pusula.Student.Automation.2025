@@ -1,0 +1,172 @@
+@using System
+@using System.IO
+@using Pusula.Student.Automation.AdminManagement
+@using Pusula.Student.Automation.Enums
+@using Volo.Abp.Content
+@inject IAdminManagementAppService AdminManagementAppService
+@inject IJSRuntime JsRuntime
+
+<div class="card mt-4">
+    <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+        <div class="flex-grow-1">
+            <input class="form-control" placeholder="Kullanıcı ara..." @bind="FilterText" />
+        </div>
+        <div>
+            <select class="form-select" @bind="SelectedRole">
+                @foreach (var role in Enum.GetValues<AdminUserRole>())
+                {
+                    <option value="@role">@GetRoleLabel(role)</option>
+                }
+            </select>
+        </div>
+        <div>
+            <select class="form-select" @bind="SelectedGender">
+                <option value="">Tüm Cinsiyetler</option>
+                @foreach (EnumGender gender in Enum.GetValues(typeof(EnumGender)))
+                {
+                    <option value="@gender">@gender</option>
+                }
+            </select>
+        </div>
+        <button class="btn btn-outline-primary" @onclick="SearchAsync" disabled="@IsSearching">
+            @(IsSearching ? "Aranıyor..." : "Ara")
+        </button>
+        <div class="ms-auto d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm" @onclick="() => ExportAsync(AdminUserExportFormat.Csv)" disabled="@(!Results.Any() || IsExporting)">
+                CSV İndir
+            </button>
+            <button class="btn btn-outline-danger btn-sm" @onclick="() => ExportAsync(AdminUserExportFormat.Pdf)" disabled="@(!Results.Any() || IsExporting)">
+                PDF İndir
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (IsSearching)
+        {
+            <div class="text-muted">Sonuçlar getiriliyor...</div>
+        }
+        else if (!Results.Any())
+        {
+            <div class="text-muted">Henüz sonuç yok.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Rol</th>
+                            <th>Ad Soyad</th>
+                            <th>E-posta</th>
+                            <th>Telefon</th>
+                            <th>Ek Bilgi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Results)
+                        {
+                            <tr>
+                                <td>@item.Role</td>
+                                <td>@item.FullName</td>
+                                <td>@item.Email</td>
+                                <td>@item.PhoneNumber</td>
+                                <td>@item.ExtraInfo</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string? FilterText;
+    private AdminUserRole SelectedRole = AdminUserRole.All;
+    private EnumGender? SelectedGender;
+    private bool IsSearching;
+    private bool IsExporting;
+    private List<AdminUserSummaryDto> Results { get; set; } = new();
+
+    private async Task SearchAsync()
+    {
+        IsSearching = true;
+        try
+        {
+            var input = new AdminUserSearchRequestDto
+            {
+                Filter = FilterText,
+                Role = SelectedRole,
+                Gender = SelectedGender
+            };
+
+            Results = await AdminManagementAppService.SearchAsync(input);
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    private async Task ExportAsync(AdminUserExportFormat format)
+    {
+        if (!Results.Any())
+        {
+            return;
+        }
+
+        IsExporting = true;
+        try
+        {
+            var input = new AdminUserExportRequestDto
+            {
+                Filter = FilterText,
+                Role = SelectedRole,
+                Format = format,
+                Gender = SelectedGender
+            };
+
+            var file = await AdminManagementAppService.ExportAsync(input);
+            await DownloadAsync(file, format);
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+
+    private async Task DownloadAsync(IRemoteStreamContent file, AdminUserExportFormat format)
+    {
+        await using var stream = file.GetStream();
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+        var base64 = Convert.ToBase64String(memory.ToArray());
+        var resolvedFileName = !string.IsNullOrWhiteSpace(file.FileName)
+            ? file.FileName
+            : $"admin-users-{DateTime.Now:yyyyMMddHHmmss}";
+        resolvedFileName = EnsureExtension(resolvedFileName, format);
+        var resolvedContentType = !string.IsNullOrWhiteSpace(file.ContentType)
+            ? file.ContentType
+            : (format == AdminUserExportFormat.Pdf ? "application/pdf" : "text/csv");
+        await JsRuntime.InvokeVoidAsync(
+            "downloadHelper.saveFileFromBase64",
+            resolvedFileName,
+            resolvedContentType,
+            base64);
+    }
+
+    private static string GetRoleLabel(AdminUserRole role) => role switch
+    {
+        AdminUserRole.Teacher => "Öğretmenler",
+        AdminUserRole.Student => "Öğrenciler",
+        _ => "Tümü"
+    };
+
+    private static string EnsureExtension(string fileName, AdminUserExportFormat format)
+    {
+        var desiredExtension = format == AdminUserExportFormat.Pdf ? ".pdf" : ".csv";
+        return fileName.EndsWith(desiredExtension, StringComparison.InvariantCultureIgnoreCase)
+            ? fileName
+            : $"{fileName}{desiredExtension}";
+    }
+}

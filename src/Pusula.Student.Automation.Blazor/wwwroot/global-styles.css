@@ -6,3 +6,7 @@ body {
     --lpx-logo: url('/images/logo/leptonx/logo-light.png');
     --lpx-logo-icon: url('/images/logo/leptonx/logo-light-thumbnail.png');
 }
+
+a[href='/Account/Register'] {
+    display: none !important;
+}

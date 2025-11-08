@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Pusula.Student.Automation.Authorization;
+using Pusula.Student.Automation.Permissions;
 using Pusula.Student.Automation.Enums;
 using Pusula.Student.Automation.LessonEnrollments;
 using Volo.Abp;
@@ -16,7 +17,7 @@ using Volo.Abp.Identity;
 
 namespace Pusula.Student.Automation.Students;
 
-[Authorize(Roles = AutomationRoleNames.Admin)]
+[Authorize(AutomationPermissions.AdminManagement)]
 public class StudentAppService : AutomationAppService, IStudentAppService
 {
     private readonly IStudentRepository _studentRepository;

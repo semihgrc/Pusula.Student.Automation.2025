@@ -1,9 +1,16 @@
-{
-  "culture": "tr",
-  "texts": {
-    "AppName": "Automation",
-    "Menu:Home": "Ana sayfa",
-    "Welcome": "Hoşgeldiniz",
-    "LongWelcomeMessage": "Uygulamaya hoşgeldiniz. Bu, ABP framework'ü üzerine bina edilmiş bir başlangıç projesidir. Daha fazla bilgi için abp.io adresini ziyaret edebilirsiniz."
-  }
+﻿{
+    "culture":  "tr",
+    "texts":  {
+                  "AppName":  "Automation",
+                  "Menu:Home":  "Ana sayfa",
+                  "Welcome":  "HoÅŸgeldiniz",
+                  "LongWelcomeMessage":  "Uygulamaya hoÅŸgeldiniz. Bu, ABP framework\u0027Ã¼ Ã¼zerine bina edilmiÅŸ bir baÅŸlangÄ±Ã§ projesidir. Daha fazla bilgi iÃ§in abp.io adresini ziyaret edebilirsiniz.",
+                  "Permission:AdminManagement":  "Yonetim paneli erisim izni",
+                  "Role:Teacher":  "Ogretmen",
+                  "Role:Student":  "Ogrenci",
+                  "AdminUserReport":  "Kullanici Raporu",
+                  "FullName":  "Ad Soyad",
+                  "PhoneNumber":  "Telefon",
+                  "ExtraInfo":  "Ek Bilgi"
+              }
 }

@@ -9,8 +9,7 @@ public class AutomationPermissionDefinitionProvider : PermissionDefinitionProvid
     public override void Define(IPermissionDefinitionContext context)
     {
         var myGroup = context.AddGroup(AutomationPermissions.GroupName);
-        //Define your own permissions here. Example:
-        //myGroup.AddPermission(AutomationPermissions.MyPermission1, L("Permission:MyPermission1"));
+        myGroup.AddPermission(AutomationPermissions.AdminManagement, L("Permission:AdminManagement"));
     }
 
     private static LocalizableString L(string name)

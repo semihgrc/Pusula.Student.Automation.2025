@@ -1,15 +1,20 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Security.Claims;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Pusula.Student.Automation.Authorization;
 using Pusula.Student.Automation.Blazor.Client;
 using Pusula.Student.Automation.Blazor.Client.Menus;
 using Pusula.Student.Automation.Blazor.Components;
@@ -122,6 +127,7 @@ public class AutomationBlazorModule : AbpModule
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
 
+        ConfigureIdentityOptions(context);
         ConfigureAuthentication(context);
         ConfigureUrls(configuration);
         ConfigureBundles();
@@ -178,6 +184,14 @@ public class AutomationBlazorModule : AbpModule
                     bundle.AddFiles(new BundleFile("/Pusula.Student.Automation.Blazor.Client.styles.css", true));
                 }
             );
+
+            options.ScriptBundles.Configure(
+                BlazorLeptonXLiteThemeBundles.Scripts.Global,
+                bundle =>
+                {
+                    bundle.AddFiles("/scripts/download.js");
+                }
+            );
         });
     }
 
@@ -223,6 +237,7 @@ public class AutomationBlazorModule : AbpModule
         });
     }
 
+
     private void ConfigureRouter(ServiceConfigurationContext context)
     {
         Configure<AbpRouterOptions>(options =>
@@ -245,6 +260,16 @@ public class AutomationBlazorModule : AbpModule
         Configure<AbpAutoMapperOptions>(options =>
         {
             options.AddMaps<AutomationBlazorModule>();
+        });
+    }
+
+    private void ConfigureIdentityOptions(ServiceConfigurationContext context)
+    {
+        Configure<IdentityOptions>(options =>
+        {
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
         });
     }
 
@@ -271,6 +296,7 @@ public class AutomationBlazorModule : AbpModule
         app.UseRouting();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
+        ConfigureRoleBasedHomeRedirect(app);
 
         if (MultiTenancyConsts.IsEnabled)
         {
@@ -294,5 +320,80 @@ public class AutomationBlazorModule : AbpModule
                 .AddInteractiveWebAssemblyRenderMode()
                 .AddAdditionalAssemblies(builder.ServiceProvider.GetRequiredService<IOptions<AbpRouterOptions>>().Value.AdditionalAssemblies.ToArray());
         });
+    }
+
+    private static void ConfigureRoleBasedHomeRedirect(IApplicationBuilder app)
+    {
+        app.Use(async (context, next) =>
+        {
+            if (IsRegisterRequest(context))
+            {
+                context.Response.Redirect("/Account/Login");
+                return;
+            }
+
+            if (IsRootRequest(context))
+            {
+                if (context.User?.Identity?.IsAuthenticated == true)
+                {
+                    var defaultRoute = GetDefaultRoute(context.User);
+                    if (!string.IsNullOrWhiteSpace(defaultRoute))
+                    {
+                        context.Response.Redirect(defaultRoute, permanent: false);
+                        return;
+                    }
+                }
+                else
+                {
+                    var loginUrl = BuildLoginUrl(context);
+                    context.Response.Redirect(loginUrl, permanent: false);
+                    return;
+                }
+            }
+
+            await next();
+        });
+    }
+
+    private static bool IsRootRequest(HttpContext context)
+    {
+        return HttpMethods.IsGet(context.Request.Method)
+               && context.Request.Path == "/";
+    }
+
+    private static bool IsRegisterRequest(HttpContext context)
+    {
+        return context.Request.Path.HasValue
+               && context.Request.Path.Value.StartsWith("/Account/Register", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? GetDefaultRoute(ClaimsPrincipal user)
+    {
+        if (user.IsInRole(AutomationRoleNames.Admin))
+        {
+            return "/admin/management";
+        }
+
+        if (user.IsInRole(AutomationRoleNames.Teacher))
+        {
+            return "/teacher/management";
+        }
+
+        if (user.IsInRole(AutomationRoleNames.Student))
+        {
+            return "/student/dashboard";
+        }
+
+        return null;
+    }
+
+    private static string BuildLoginUrl(HttpContext context)
+    {
+        var returnUrl = (context.Request.PathBase.HasValue ? context.Request.PathBase.Value : string.Empty)
+                        + (context.Request.Path.HasValue ? context.Request.Path.Value : string.Empty)
+                        + (context.Request.QueryString.HasValue ? context.Request.QueryString.Value : string.Empty);
+
+        var encodedReturnUrl = WebUtility.UrlEncode(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
+        return $"/Account/Login?ReturnUrl={encodedReturnUrl}";
     }
 }

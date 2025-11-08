@@ -1,12 +1,13 @@
 @page "/admin/management"
 @using System.Linq
 @using Microsoft.AspNetCore.Authorization
-@using Pusula.Student.Automation.Authorization
+@using Pusula.Student.Automation.Permissions
+@using Pusula.Student.Automation.AdminManagement
 @using Pusula.Student.Automation.LessonEnrollments
 @using Pusula.Student.Automation.Lessons
 @using Pusula.Student.Automation.Students
 @using Pusula.Student.Automation.Teachers
-@attribute [Authorize(Roles = AutomationRoleNames.Admin)]
+@attribute [Authorize(AutomationPermissions.AdminManagement)]
 @inherits AutomationComponentBase
 
 <PageTitle>Yönetim Paneli</PageTitle>
@@ -37,6 +38,8 @@
             </div>
         </div>
     </div>
+
+    <AdminUserSearch />
 
     @if (TeacherEditInput != null || StudentEditInput != null)
     {

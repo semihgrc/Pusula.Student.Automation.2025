@@ -9,11 +9,19 @@
     <div class="row g-3">
         <div class="col-md-6">
             <label class="form-label">Ad</label>
-            <input class="form-control" @bind="Model.Name" />
+            <input class="form-control"
+                   @bind="Model.Name"
+                   required
+                   minlength="@StudentConsts.MinNameLength"
+                   maxlength="@StudentConsts.MaxNameLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">Soyad</label>
-            <input class="form-control" @bind="Model.Surname" />
+            <input class="form-control"
+                   @bind="Model.Surname"
+                   required
+                   minlength="@StudentConsts.MinSurnameLength"
+                   maxlength="@StudentConsts.MaxSurnameLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">Cinsiyet</label>
@@ -26,15 +34,28 @@
         </div>
         <div class="col-md-6">
             <label class="form-label">Öğrenci No</label>
-            <input class="form-control" @bind="Model.StudentNumber" />
+            <input class="form-control"
+                   @bind="Model.StudentNumber"
+                   required
+                   minlength="@StudentConsts.MinStudentNumberLength"
+                   maxlength="@StudentConsts.MaxStudentNumberLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">E-posta</label>
-            <input class="form-control" type="email" @bind="Model.Email" />
+            <input class="form-control"
+                   type="email"
+                   @bind="Model.Email"
+                   required
+                   minlength="@StudentConsts.MinEmailLength"
+                   maxlength="@StudentConsts.MaxEmailLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">Telefon</label>
-            <input class="form-control" @bind="Model.PhoneNumber" />
+            <input class="form-control"
+                   @bind="Model.PhoneNumber"
+                   required
+                   minlength="@StudentConsts.MinPhoneNumberLength"
+                   maxlength="@StudentConsts.MaxPhoneNumberLength" />
         </div>
     </div>
 

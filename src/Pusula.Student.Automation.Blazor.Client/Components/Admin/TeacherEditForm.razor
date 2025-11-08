@@ -9,11 +9,19 @@
     <div class="row g-3">
         <div class="col-md-6">
             <label class="form-label">Ad</label>
-            <input class="form-control" @bind="Model.Name" />
+            <input class="form-control"
+                   @bind="Model.Name"
+                   required
+                   minlength="@TeacherConsts.MinNameLength"
+                   maxlength="@TeacherConsts.MaxNameLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">Soyad</label>
-            <input class="form-control" @bind="Model.Surname" />
+            <input class="form-control"
+                   @bind="Model.Surname"
+                   required
+                   minlength="@TeacherConsts.MinSurnameLength"
+                   maxlength="@TeacherConsts.MaxSurnameLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">Cinsiyet</label>
@@ -26,15 +34,28 @@
         </div>
         <div class="col-md-6">
             <label class="form-label">Unvan</label>
-            <input class="form-control" @bind="Model.Title" />
+            <input class="form-control"
+                   @bind="Model.Title"
+                   required
+                   minlength="@TeacherConsts.MinTitleLength"
+                   maxlength="@TeacherConsts.MaxTitleLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">E-posta</label>
-            <input class="form-control" type="email" @bind="Model.Email" />
+            <input class="form-control"
+                   type="email"
+                   @bind="Model.Email"
+                   required
+                   minlength="@TeacherConsts.MinEmailLength"
+                   maxlength="@TeacherConsts.MaxEmailLength" />
         </div>
         <div class="col-md-6">
             <label class="form-label">Telefon</label>
-            <input class="form-control" @bind="Model.PhoneNumber" />
+            <input class="form-control"
+                   @bind="Model.PhoneNumber"
+                   required
+                   minlength="@TeacherConsts.MinPhoneNumberLength"
+                   maxlength="@TeacherConsts.MaxPhoneNumberLength" />
         </div>
     </div>
 

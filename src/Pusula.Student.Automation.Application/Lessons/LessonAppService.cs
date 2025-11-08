@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Pusula.Student.Automation.Authorization;
+using Pusula.Student.Automation.Permissions;
 using Pusula.Student.Automation.LessonEnrollments;
 using Pusula.Student.Automation.Teachers;
 using Volo.Abp;
@@ -65,7 +66,7 @@ public class LessonAppService : AutomationAppService, ILessonAppService
         return new PagedResultDto<LessonDto>(totalCount, items);
     }
 
-    [Authorize(Roles = AutomationRoleNames.Admin)]
+    [Authorize(AutomationPermissions.AdminManagement)]
     public virtual async Task<LessonDto> CreateAsync(LessonCreateDto input, CancellationToken cancellationToken = default)
     {
         var lesson = await _lessonManager.CreateAsync(
@@ -77,7 +78,7 @@ public class LessonAppService : AutomationAppService, ILessonAppService
         return await MapLessonAsync(lesson, cancellationToken);
     }
 
-    [Authorize(Roles = AutomationRoleNames.Admin)]
+    [Authorize(AutomationPermissions.AdminManagement)]
     public virtual async Task<LessonDto> UpdateAsync(Guid id, LessonUpdateDto input, CancellationToken cancellationToken = default)
     {
         var lesson = await _lessonManager.UpdateAsync(
@@ -92,7 +93,7 @@ public class LessonAppService : AutomationAppService, ILessonAppService
         return await MapLessonAsync(lesson, cancellationToken);
     }
 
-    [Authorize(Roles = AutomationRoleNames.Admin)]
+    [Authorize(AutomationPermissions.AdminManagement)]
     public virtual async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await _lessonManager.DeleteAsync(id, cancellationToken);
