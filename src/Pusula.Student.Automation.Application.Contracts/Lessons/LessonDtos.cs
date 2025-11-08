@@ -64,6 +64,8 @@ public class LessonEnrollmentDto : FullAuditedEntityDto<Guid>, IHasConcurrencySt
     public Guid LessonId { get; set; }
     public Guid StudentId { get; set; }
     public decimal? Grade { get; set; }
+    public decimal? MidtermGrade { get; set; }
+    public decimal? FinalGrade { get; set; }
     public string? TeacherComment { get; set; }
     public int AbsenceCount { get; set; }
     public string StudentName { get; set; } = default!;
@@ -83,6 +85,8 @@ public class LessonEnrollmentCreateDto
 public class LessonEnrollmentUpdateDto : IHasConcurrencyStamp
 {
     public decimal? Grade { get; set; }
+    public decimal? MidtermGrade { get; set; }
+    public decimal? FinalGrade { get; set; }
 
     [StringLength(LessonEnrollmentConsts.MaxTeacherCommentLength)]
     public string? TeacherComment { get; set; }

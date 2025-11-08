@@ -34,4 +34,12 @@ public interface ILessonAppService : IApplicationService
     Task<List<LessonEnrollmentDto>> GetLessonStudentsAsync(Guid lessonId, CancellationToken cancellationToken = default);
 
     Task<List<LessonEnrollmentDto>> GetStudentEnrollmentsAsync(Guid studentId, CancellationToken cancellationToken = default);
+
+    Task<List<LessonDailyReportSummaryDto>> GetDailyReportsAsync(Guid lessonId, CancellationToken cancellationToken = default);
+
+    Task<LessonDailyReportDto> GetDailyReportAsync(Guid lessonId, DateTime date, CancellationToken cancellationToken = default);
+
+    Task<LessonDailyReportDto> SaveDailyReportAsync(LessonDailyReportSaveDto input, CancellationToken cancellationToken = default);
+
+    Task DeleteDailyReportAsync(Guid reportId, CancellationToken cancellationToken = default);
 }

@@ -11,6 +11,8 @@ public class LessonEnrollment : FullAuditedAggregateRoot<Guid>, IHasConcurrencyS
     public Guid LessonId { get; private set; }
     public Guid StudentId { get; private set; }
     public decimal? Grade { get; private set; }
+    public decimal? MidtermGrade { get; private set; }
+    public decimal? FinalGrade { get; private set; }
     public string? TeacherComment { get; private set; }
     public int AbsenceCount { get; private set; }
 
@@ -51,6 +53,34 @@ public class LessonEnrollment : FullAuditedAggregateRoot<Guid>, IHasConcurrencyS
         }
 
         TeacherComment = comment;
+    }
+
+    public void SetMidtermGrade(decimal? grade)
+    {
+        if (grade.HasValue)
+        {
+            Check.Range(
+                grade.Value,
+                nameof(grade),
+                LessonEnrollmentConsts.MinGrade,
+                LessonEnrollmentConsts.MaxGrade);
+        }
+
+        MidtermGrade = grade;
+    }
+
+    public void SetFinalGrade(decimal? grade)
+    {
+        if (grade.HasValue)
+        {
+            Check.Range(
+                grade.Value,
+                nameof(grade),
+                LessonEnrollmentConsts.MinGrade,
+                LessonEnrollmentConsts.MaxGrade);
+        }
+
+        FinalGrade = grade;
     }
 
     public void SetAbsenceCount(int absenceCount)

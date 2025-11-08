@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Pusula.Student.Automation;
+using Pusula.Student.Automation.LessonDailyReports;
 using Pusula.Student.Automation.LessonEnrollments;
 using Pusula.Student.Automation.Lessons;
 using Pusula.Student.Automation.Students;
@@ -34,6 +35,7 @@ public class AutomationDbContext :
     public DbSet<StudentEntity> Students { get; set; }
     public DbSet<Lesson> Lessons { get; set; }
     public DbSet<LessonEnrollment> LessonEnrollments { get; set; }
+    public DbSet<LessonDailyReport> LessonDailyReports { get; set; }
 
     #region Entities from the modules
 
@@ -135,6 +137,8 @@ public class AutomationDbContext :
             b.ConfigureByConvention();
             b.Property(x => x.TeacherComment).HasMaxLength(LessonEnrollmentConsts.MaxTeacherCommentLength);
             b.Property(x => x.Grade).HasPrecision(5, 2);
+            b.Property(x => x.MidtermGrade).HasPrecision(5, 2);
+            b.Property(x => x.FinalGrade).HasPrecision(5, 2);
             b.Property(x => x.AbsenceCount).IsRequired();
 
             b.HasOne(x => x.Lesson)
@@ -148,6 +152,28 @@ public class AutomationDbContext :
                 .OnDelete(DeleteBehavior.Restrict);
 
             b.HasIndex(x => new { x.LessonId, x.StudentId }).IsUnique();
+        });
+
+        builder.Entity<LessonDailyReport>(b =>
+        {
+            b.ToTable(AutomationConsts.DbTablePrefix + "LessonDailyReports", AutomationConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Date).IsRequired();
+            b.HasIndex(x => new { x.LessonId, x.Date }).IsUnique();
+            b.HasMany(x => x.Entries)
+                .WithOne()
+                .HasForeignKey(entry => entry.LessonDailyReportId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<LessonDailyReportEntry>(b =>
+        {
+            b.ToTable(AutomationConsts.DbTablePrefix + "LessonDailyReportEntries", AutomationConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.IsPresent).IsRequired();
+            b.Property(x => x.DailyGrade).HasPrecision(5, 2);
+            b.Property(x => x.DailyComment).HasMaxLength(LessonDailyReportConsts.MaxDailyCommentLength);
+            b.HasIndex(x => new { x.LessonDailyReportId, x.StudentId }).IsUnique();
         });
     }
 }

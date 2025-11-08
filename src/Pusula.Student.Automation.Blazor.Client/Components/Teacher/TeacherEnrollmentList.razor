@@ -1,0 +1,174 @@
+﻿@using Pusula.Student.Automation.Lessons
+
+@if (Lesson == null)
+{
+    <div class="alert alert-info mt-3">
+        Bir ders seçerek öğrencileri görüntüleyebilirsiniz.
+    </div>
+}
+else if (Lesson.Enrollments.Count == 0)
+{
+    <div class="alert alert-warning mt-3">
+        "@Lesson.Name" dersine kayıtlı öğrenci yok.
+    </div>
+}
+else
+{
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-sm align-middle">
+            <thead>
+            <tr>
+                <th>Öğrenci</th>
+                <th>Numara</th>
+                <th>Genel Not</th>
+                <th>Vize</th>
+                <th>Final</th>
+                <th>Devamsızlık</th>
+                <th>Yorum</th>
+                @if (CanManage)
+                {
+                    <th class="text-end">İşlemler</th>
+                }
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var enrollment in Lesson.Enrollments)
+            {
+                var model = _editModels[enrollment.Id];
+                <tr>
+                    <td>@enrollment.StudentName</td>
+                    <td>@enrollment.StudentNumber</td>
+                    <td style="width:120px;">
+                        <input type="number"
+                               step="0.01"
+                               class="form-control form-control-sm"
+                               @bind="model.Grade"
+                               disabled="@(!CanManage)" />
+                    </td>
+                    <td style="width:120px;">
+                        <input type="number"
+                               step="0.01"
+                               class="form-control form-control-sm"
+                               @bind="model.MidtermGrade"
+                               disabled="@(!CanManage)" />
+                    </td>
+                    <td style="width:120px;">
+                        <input type="number"
+                               step="0.01"
+                               class="form-control form-control-sm"
+                               @bind="model.FinalGrade"
+                               disabled="@(!CanManage)" />
+                    </td>
+                    <td style="width:120px;">
+                        <input type="number"
+                               min="0"
+                               class="form-control form-control-sm"
+                               @bind="model.AbsenceCount"
+                               disabled="@(!CanManage)" />
+                    </td>
+                    <td>
+                        <textarea class="form-control form-control-sm"
+                                  rows="1"
+                                  @bind="model.TeacherComment"
+                                  disabled="@(!CanManage)"></textarea>
+                    </td>
+                    @if (CanManage)
+                    {
+                        <td class="text-end" style="width:160px;">
+                            <button class="btn btn-sm btn-outline-success me-1"
+                                    @onclick="() => UpdateAsync(enrollment.Id)">
+                                Kaydet
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => RemoveAsync(enrollment.StudentId)">
+                                Sil
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter] public LessonDto? Lesson { get; set; }
+    [Parameter] public bool CanManage { get; set; }
+    [Parameter] public EventCallback<(Guid LessonId, Guid StudentId, LessonEnrollmentUpdateDto Input)> OnUpdate { get; set; }
+    [Parameter] public EventCallback<Guid> OnRemove { get; set; }
+
+    private readonly Dictionary<Guid, LessonEnrollmentEditModel> _editModels = new();
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        _editModels.Clear();
+
+        if (Lesson?.Enrollments == null)
+        {
+            return;
+        }
+
+        foreach (var enrollment in Lesson.Enrollments)
+        {
+            _editModels[enrollment.Id] = new LessonEnrollmentEditModel
+            {
+                EnrollmentId = enrollment.Id,
+                LessonId = enrollment.LessonId,
+                StudentId = enrollment.StudentId,
+                Grade = enrollment.Grade,
+                MidtermGrade = enrollment.MidtermGrade,
+                FinalGrade = enrollment.FinalGrade,
+                AbsenceCount = enrollment.AbsenceCount,
+                TeacherComment = enrollment.TeacherComment,
+                ConcurrencyStamp = enrollment.ConcurrencyStamp
+            };
+        }
+    }
+
+    private async Task UpdateAsync(Guid enrollmentId)
+    {
+        if (!_editModels.TryGetValue(enrollmentId, out var model) || Lesson == null)
+        {
+            return;
+        }
+
+        if (OnUpdate.HasDelegate)
+        {
+            await OnUpdate.InvokeAsync(
+                (model.LessonId,
+                    model.StudentId,
+                    new LessonEnrollmentUpdateDto
+                    {
+                        Grade = model.Grade,
+                        MidtermGrade = model.MidtermGrade,
+                        FinalGrade = model.FinalGrade,
+                        AbsenceCount = model.AbsenceCount,
+                        TeacherComment = model.TeacherComment,
+                        ConcurrencyStamp = model.ConcurrencyStamp
+                    }));
+        }
+    }
+
+    private async Task RemoveAsync(Guid studentId)
+    {
+        if (OnRemove.HasDelegate)
+        {
+            await OnRemove.InvokeAsync(studentId);
+        }
+    }
+
+    private class LessonEnrollmentEditModel
+    {
+        public Guid EnrollmentId { get; set; }
+        public Guid LessonId { get; set; }
+        public Guid StudentId { get; set; }
+        public decimal? Grade { get; set; }
+        public decimal? MidtermGrade { get; set; }
+        public decimal? FinalGrade { get; set; }
+        public int AbsenceCount { get; set; }
+        public string? TeacherComment { get; set; }
+        public string ConcurrencyStamp { get; set; } = string.Empty;
+    }
+}

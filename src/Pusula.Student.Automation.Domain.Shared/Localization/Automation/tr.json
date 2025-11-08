@@ -6,6 +6,7 @@
                   "Welcome":  "HoÅŸgeldiniz",
                   "LongWelcomeMessage":  "Uygulamaya hoÅŸgeldiniz. Bu, ABP framework\u0027Ã¼ Ã¼zerine bina edilmiÅŸ bir baÅŸlangÄ±Ã§ projesidir. Daha fazla bilgi iÃ§in abp.io adresini ziyaret edebilirsiniz.",
                   "Permission:AdminManagement":  "Yonetim paneli erisim izni",
+                  "Permission:TeacherPortal": "Ogretmen paneli erisim izni",
                   "Role:Teacher":  "Ogretmen",
                   "Role:Student":  "Ogrenci",
                   "AdminUserReport":  "Kullanici Raporu",

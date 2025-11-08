@@ -52,6 +52,12 @@ public class AutomationRoleDataSeedContributor : IDataSeedContributor, ITransien
                 AutomationRoleNames.Admin,
                 new[] { AutomationPermissions.AdminManagement },
                 context?.TenantId);
+
+            await _permissionDataSeeder.SeedAsync(
+                RolePermissionValueProvider.ProviderName,
+                AutomationRoleNames.Teacher,
+                new[] { AutomationPermissions.TeacherPortal },
+                context?.TenantId);
         }
     }
 

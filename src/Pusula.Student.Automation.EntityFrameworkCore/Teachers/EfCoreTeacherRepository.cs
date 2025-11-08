@@ -26,6 +26,12 @@ public class EfCoreTeacherRepository
         return await dbSet.FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
     }
 
+    public async Task<Teacher?> FindByIdentityUserIdAsync(Guid identityUserId, CancellationToken cancellationToken = default)
+    {
+        var dbSet = await GetDbSetAsync();
+        return await dbSet.FirstOrDefaultAsync(x => x.IdentityUserId == identityUserId, cancellationToken);
+    }
+
     public async Task<List<Teacher>> GetListAsync(
         string? filter = null,
         int skipCount = 0,

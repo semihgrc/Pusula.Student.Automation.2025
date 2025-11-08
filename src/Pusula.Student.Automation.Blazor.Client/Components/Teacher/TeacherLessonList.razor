@@ -1,0 +1,78 @@
+@using Pusula.Student.Automation.Lessons
+@using Pusula.Student.Automation.Enums
+
+<div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+        <thead>
+        <tr>
+            <th>Ders</th>
+            <th>Öğretmen</th>
+            <th>Durum</th>
+            <th class="text-end">İşlemler</th>
+        </tr>
+        </thead>
+        <tbody>
+        @if (Items is null || Items.Count == 0)
+        {
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">Ders bulunamadı</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var lesson in Items)
+            {
+                var isSelected = SelectedLessonId == lesson.Id;
+                <tr class="@((isSelected ? "table-primary" : string.Empty))">
+                    <td>@lesson.Name</td>
+                    <td>@lesson.TeacherName</td>
+                    <td style="min-width: 160px;">
+                        <select class="form-select form-select-sm"
+                                value="@lesson.Status"
+                                @onchange="args => OnStatusChangedAsync(lesson, args.Value?.ToString())"
+                                disabled="@(!CanManageStatus(lesson))">
+                            @foreach (LessonStatus status in Enum.GetValues(typeof(LessonStatus)))
+                            {
+                                <option value="@status" selected="@(lesson.Status == status)">@status</option>
+                            }
+                        </select>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm @(isSelected ? "btn-outline-secondary" : "btn-outline-primary")"
+                                @onclick="() => OnSelect.InvokeAsync(lesson.Id)">
+                            @(isSelected ? "Seçili" : "Detay")
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<LessonDto> Items { get; set; } = Array.Empty<LessonDto>();
+    [Parameter] public Guid? SelectedLessonId { get; set; }
+    [Parameter] public Guid? ManagedTeacherId { get; set; }
+    [Parameter] public EventCallback<Guid> OnSelect { get; set; }
+    [Parameter] public EventCallback<(Guid LessonId, LessonStatus Status, string ConcurrencyStamp)> OnStatusChange { get; set; }
+
+    private bool CanManageStatus(LessonDto lesson)
+    {
+        return ManagedTeacherId.HasValue && lesson.TeacherId == ManagedTeacherId.Value;
+    }
+
+    private async Task OnStatusChangedAsync(LessonDto lesson, string? value)
+    {
+        if (!CanManageStatus(lesson))
+        {
+            return;
+        }
+
+        if (Enum.TryParse<LessonStatus>(value, out var status)
+            && OnStatusChange.HasDelegate)
+        {
+            await OnStatusChange.InvokeAsync((lesson.Id, status, lesson.ConcurrencyStamp));
+        }
+    }
+}

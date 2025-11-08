@@ -9,6 +9,7 @@ namespace Pusula.Student.Automation.Teachers;
 public interface ITeacherRepository : IRepository<Teacher, Guid>
 {
     Task<Teacher?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<Teacher?> FindByIdentityUserIdAsync(Guid identityUserId, CancellationToken cancellationToken = default);
 
     Task<List<Teacher>> GetListAsync(
         string? filter = null,

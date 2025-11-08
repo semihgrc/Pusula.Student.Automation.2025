@@ -5,9 +5,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Pusula.Student.Automation.Authorization;
-using Pusula.Student.Automation.Permissions;
+using Pusula.Student.Automation.LessonDailyReports;
 using Pusula.Student.Automation.LessonEnrollments;
 using Pusula.Student.Automation.Teachers;
+using Pusula.Student.Automation.Permissions;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -21,17 +22,19 @@ public class LessonAppService : AutomationAppService, ILessonAppService
     private readonly LessonManager _lessonManager;
     private readonly ILessonEnrollmentRepository _lessonEnrollmentRepository;
     private readonly ITeacherRepository _teacherRepository;
-
+    private readonly ILessonDailyReportRepository _lessonDailyReportRepository;
     public LessonAppService(
         ILessonRepository lessonRepository,
         LessonManager lessonManager,
         ILessonEnrollmentRepository lessonEnrollmentRepository,
-        ITeacherRepository teacherRepository)
+        ITeacherRepository teacherRepository,
+        ILessonDailyReportRepository lessonDailyReportRepository)
     {
         _lessonRepository = lessonRepository;
         _lessonManager = lessonManager;
         _lessonEnrollmentRepository = lessonEnrollmentRepository;
         _teacherRepository = teacherRepository;
+        _lessonDailyReportRepository = lessonDailyReportRepository;
     }
 
     public virtual async Task<LessonDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
@@ -139,6 +142,9 @@ public class LessonAppService : AutomationAppService, ILessonAppService
             NormalizeConcurrencyStamp(input.ConcurrencyStamp),
             cancellationToken);
 
+        enrollment.SetMidtermGrade(input.MidtermGrade);
+        enrollment.SetFinalGrade(input.FinalGrade);
+
         var detailedEnrollment = await _lessonEnrollmentRepository.GetAsync(
             enrollment.Id,
             includeDetails: true,
@@ -158,6 +164,110 @@ public class LessonAppService : AutomationAppService, ILessonAppService
     {
         var enrollments = await _lessonEnrollmentRepository.GetByStudentAsync(studentId, cancellationToken);
         return ObjectMapper.Map<List<LessonEnrollment>, List<LessonEnrollmentDto>>(enrollments);
+    }
+
+    public virtual async Task<List<LessonDailyReportSummaryDto>> GetDailyReportsAsync(Guid lessonId, CancellationToken cancellationToken = default)
+    {
+        var reports = await _lessonDailyReportRepository.GetListByLessonAsync(lessonId, cancellationToken);
+        return reports
+            .OrderByDescending(r => r.Date)
+            .Select(r => new LessonDailyReportSummaryDto
+            {
+                Id = r.Id,
+                Date = r.Date,
+                StudentCount = r.Entries.Count
+            })
+            .ToList();
+    }
+
+    public virtual async Task<LessonDailyReportDto> GetDailyReportAsync(Guid lessonId, DateTime date, CancellationToken cancellationToken = default)
+    {
+        var report = await _lessonDailyReportRepository.FindByLessonAndDateAsync(lessonId, date, includeDetails: true, cancellationToken: cancellationToken);
+        if (report == null)
+        {
+            throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportNotFound)
+                .WithData(nameof(lessonId), lessonId)
+                .WithData(nameof(date), date.ToShortDateString());
+        }
+
+        return await MapDailyReportAsync(report, cancellationToken);
+    }
+
+    public virtual async Task<LessonDailyReportDto> SaveDailyReportAsync(LessonDailyReportSaveDto input, CancellationToken cancellationToken = default)
+    {
+        if (input.Entries == null || input.Entries.Count == 0)
+        {
+            throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportHasNoEntries)
+                .WithData(nameof(input.LessonId), input.LessonId)
+                .WithData(nameof(input.Date), input.Date.ToShortDateString());
+        }
+
+        var lesson = await _lessonRepository.GetAsync(input.LessonId, includeDetails: false, cancellationToken: cancellationToken);
+        var enrollments = await _lessonEnrollmentRepository.GetByLessonAsync(input.LessonId, cancellationToken);
+        var enrollmentDict = enrollments.ToDictionary(e => e.StudentId, e => e);
+
+        foreach (var entry in input.Entries)
+        {
+            if (!enrollmentDict.ContainsKey(entry.StudentId))
+            {
+                throw new BusinessException(AutomationDomainErrorCodes.LessonEnrollmentNotFound)
+                    .WithData(nameof(entry.StudentId), entry.StudentId);
+            }
+        }
+
+        LessonDailyReport? report = null;
+        if (input.ReportId.HasValue)
+        {
+            report = await _lessonDailyReportRepository.GetAsync(input.ReportId.Value, includeDetails: true, cancellationToken: cancellationToken);
+            if (report.LessonId != input.LessonId)
+            {
+                throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportNotFound)
+                    .WithData(nameof(input.ReportId), input.ReportId);
+            }
+            report.SetDate(input.Date);
+            report.SetTeacher(lesson.TeacherId);
+        }
+        else
+        {
+            var existingReport = await _lessonDailyReportRepository.FindByLessonAndDateAsync(input.LessonId, input.Date, includeDetails: false, cancellationToken: cancellationToken);
+            if (existingReport != null)
+            {
+                throw new BusinessException(AutomationDomainErrorCodes.LessonDailyReportAlreadyExists)
+                    .WithData(nameof(input.Date), input.Date.ToShortDateString());
+            }
+
+            report = new LessonDailyReport(GuidGenerator.Create(), input.LessonId, lesson.TeacherId, input.Date);
+        }
+
+        var entryEntities = input.Entries
+            .Select(entry =>
+                new LessonDailyReportEntry(
+                    entry.EntryId ?? GuidGenerator.Create(),
+                    report!.Id,
+                    input.LessonId,
+                    entry.StudentId,
+                    entry.IsPresent,
+                    entry.DailyGrade,
+                    entry.DailyComment))
+            .ToList();
+
+        report.ReplaceEntries(entryEntities);
+
+        if (input.ReportId.HasValue)
+        {
+            await _lessonDailyReportRepository.UpdateAsync(report, autoSave: true, cancellationToken);
+        }
+        else
+        {
+            await _lessonDailyReportRepository.InsertAsync(report, autoSave: true, cancellationToken);
+        }
+
+        return await MapDailyReportAsync(report, cancellationToken);
+    }
+
+    public virtual async Task DeleteDailyReportAsync(Guid reportId, CancellationToken cancellationToken = default)
+    {
+        await _lessonDailyReportRepository.DeleteAsync(reportId, cancellationToken: cancellationToken);
     }
 
     private async Task<LessonDto> MapLessonAsync(
@@ -188,6 +298,29 @@ public class LessonAppService : AutomationAppService, ILessonAppService
             }
         }
 
+        return dto;
+    }
+
+    private async Task<LessonDailyReportDto> MapDailyReportAsync(
+        LessonDailyReport report,
+        CancellationToken cancellationToken)
+    {
+        var dto = ObjectMapper.Map<LessonDailyReport, LessonDailyReportDto>(report);
+        var entryDtos = ObjectMapper.Map<List<LessonDailyReportEntry>, List<LessonDailyReportEntryDto>>(report.Entries.ToList());
+
+        var enrollments = await _lessonEnrollmentRepository.GetByLessonAsync(report.LessonId, cancellationToken);
+        var enrollmentDict = enrollments.ToDictionary(e => e.StudentId, e => e);
+
+        foreach (var entry in entryDtos)
+        {
+            if (enrollmentDict.TryGetValue(entry.StudentId, out var enrollment) && enrollment.Student != null)
+            {
+                entry.StudentName = $"{enrollment.Student.Name} {enrollment.Student.Surname}";
+                entry.StudentNumber = enrollment.Student.StudentNumber ?? string.Empty;
+            }
+        }
+
+        dto.Entries = entryDtos.OrderBy(e => e.StudentName).ToList();
         return dto;
     }
 }

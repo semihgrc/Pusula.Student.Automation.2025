@@ -1,5 +1,6 @@
 using AutoMapper;
 using Pusula.Student.Automation.LessonEnrollments;
+using Pusula.Student.Automation.LessonDailyReports;
 using Pusula.Student.Automation.Lessons;
 using Pusula.Student.Automation.Students;
 using Pusula.Student.Automation.Teachers;
@@ -33,5 +34,8 @@ public class AutomationApplicationAutoMapperProfile : Profile
                         : src.Student.Name + " " + src.Student.Surname))
             .ForMember(dest => dest.StudentNumber,
                 opt => opt.MapFrom(src => src.Student == null ? string.Empty : src.Student.StudentNumber));
+
+        CreateMap<LessonDailyReport, LessonDailyReportDto>();
+        CreateMap<LessonDailyReportEntry, LessonDailyReportEntryDto>();
     }
 }
