@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 using Pusula.Student.Automation.Authorization;
 using Pusula.Student.Automation.LessonDailyReports;
 using Pusula.Student.Automation.LessonEnrollments;
@@ -36,6 +37,7 @@ public class StudentPortalAppService : AutomationAppService, IStudentPortalAppSe
     {
         var student = await GetCurrentStudentAsync();
         var enrollments = await _lessonEnrollmentRepository.GetByStudentAsync(student.Id);
+        Logger.LogWarning("StudentDashboard: Student {StudentId} requested dashboard. Enrollment count: {EnrollmentCount}", student.Id, enrollments.Count);
 
         var lessonSummaries = new List<StudentLessonDashboardDto>();
 
@@ -65,9 +67,13 @@ public class StudentPortalAppService : AutomationAppService, IStudentPortalAppSe
 
             summary.DailyReports = await GetDailyReportsForLessonAsync(lesson.Id, student.Id);
             lessonSummaries.Add(summary);
+            Logger.LogDebug("Prepared summary for lesson {LessonId} ({LessonName}) with {ReportCount} daily reports",
+                lesson.Id,
+                lesson.Name,
+                summary.DailyReports.Count);
         }
 
-        return new StudentDashboardDto
+        var dashboard = new StudentDashboardDto
         {
             StudentId = student.Id,
             Name = student.Name,
@@ -76,6 +82,9 @@ public class StudentPortalAppService : AutomationAppService, IStudentPortalAppSe
                 .OrderBy(l => l.LessonName)
                 .ToList()
         };
+
+        Logger.LogWarning("StudentDashboard: Student {StudentId} dashboard prepared with {LessonCount} lessons", student.Id, dashboard.Lessons.Count);
+        return dashboard;
     }
 
     private async Task<StudentEntity> GetCurrentStudentAsync(CancellationToken cancellationToken = default)
@@ -92,13 +101,14 @@ public class StudentPortalAppService : AutomationAppService, IStudentPortalAppSe
                 .WithData(nameof(CurrentUser.Id), CurrentUser.Id);
         }
 
+        Logger.LogDebug("Resolved current student {StudentId} for user {UserId}", student.Id, CurrentUser.Id);
         return student;
     }
 
     private async Task<List<StudentDailyReportEntryDto>> GetDailyReportsForLessonAsync(Guid lessonId, Guid studentId)
     {
         var reports = await _lessonDailyReportRepository.GetListByLessonAsync(lessonId);
-        return reports
+        var reportEntries = reports
             .Select(report => new
             {
                 Report = report,
@@ -115,5 +125,8 @@ public class StudentPortalAppService : AutomationAppService, IStudentPortalAppSe
             })
             .OrderByDescending(x => x.Date)
             .ToList();
+
+        Logger.LogDebug("Collected {Count} daily reports for lesson {LessonId} and student {StudentId}", reportEntries.Count, lessonId, studentId);
+        return reportEntries;
     }
 }
