@@ -122,6 +122,17 @@ public class AutomationBlazorModule : AbpModule
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
 
+        var redisConnection = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(redisConnection))
+        {
+            var redisInstanceName = configuration["RedisCache:InstanceName"] ?? "PusulaStudentAutomation:";
+            context.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnection;
+                options.InstanceName = redisInstanceName;
+            });
+        }
+
         // Add services to the container.
         context.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
