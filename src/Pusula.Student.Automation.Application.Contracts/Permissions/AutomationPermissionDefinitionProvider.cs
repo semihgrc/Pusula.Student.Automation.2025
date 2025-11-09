@@ -11,6 +11,7 @@ public class AutomationPermissionDefinitionProvider : PermissionDefinitionProvid
         var myGroup = context.AddGroup(AutomationPermissions.GroupName);
         myGroup.AddPermission(AutomationPermissions.AdminManagement, L("Permission:AdminManagement"));
         myGroup.AddPermission(AutomationPermissions.TeacherPortal, L("Permission:TeacherPortal"));
+        myGroup.AddPermission(AutomationPermissions.StudentPortal, L("Permission:StudentPortal"));
     }
 
     private static LocalizableString L(string name)

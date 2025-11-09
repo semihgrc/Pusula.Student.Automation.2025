@@ -6,4 +6,5 @@ public static class AutomationPermissions
 
     public const string AdminManagement = GroupName + ".AdminManagement";
     public const string TeacherPortal = GroupName + ".TeacherPortal";
+    public const string StudentPortal = GroupName + ".StudentPortal";
 }

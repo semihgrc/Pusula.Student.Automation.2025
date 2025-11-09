@@ -12,6 +12,8 @@ public interface IStudentRepository : IRepository<Student, Guid>
 
     Task<Student?> FindByStudentNumberAsync(string studentNumber, CancellationToken cancellationToken = default);
 
+    Task<Student?> FindByIdentityUserIdAsync(Guid identityUserId, CancellationToken cancellationToken = default);
+
     Task<List<Student>> GetListAsync(
         string? filter = null,
         int skipCount = 0,

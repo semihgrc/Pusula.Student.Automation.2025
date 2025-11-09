@@ -84,13 +84,19 @@ public class LessonEnrollmentCreateDto
 
 public class LessonEnrollmentUpdateDto : IHasConcurrencyStamp
 {
+    [Range((double)LessonEnrollmentConsts.MinGrade, (double)LessonEnrollmentConsts.MaxGrade)]
     public decimal? Grade { get; set; }
+
+    [Range((double)LessonEnrollmentConsts.MinGrade, (double)LessonEnrollmentConsts.MaxGrade)]
     public decimal? MidtermGrade { get; set; }
+
+    [Range((double)LessonEnrollmentConsts.MinGrade, (double)LessonEnrollmentConsts.MaxGrade)]
     public decimal? FinalGrade { get; set; }
 
     [StringLength(LessonEnrollmentConsts.MaxTeacherCommentLength)]
     public string? TeacherComment { get; set; }
 
+    [Range(LessonEnrollmentConsts.MinAbsenceCount, LessonEnrollmentConsts.MaxAbsenceCount)]
     public int? AbsenceCount { get; set; }
 
     public string ConcurrencyStamp { get; set; } = string.Empty;

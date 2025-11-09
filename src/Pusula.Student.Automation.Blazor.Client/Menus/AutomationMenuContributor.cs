@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Volo.Abp;
 using Pusula.Student.Automation.MultiTenancy;
+using Pusula.Student.Automation.Permissions;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Account.Localization;
 using Volo.Abp.Identity.Blazor;
@@ -35,30 +36,7 @@ public class AutomationMenuContributor : IMenuContributor
 
     private Task ConfigureMainMenuAsync(MenuConfigurationContext context)
     {
-        context.Menu.Items.Insert(
-            0,
-            new ApplicationMenuItem(
-                "Automation.AdminManagement",
-                "Yonetim Paneli",
-                "/admin/management",
-                icon: "fas fa-user-gear"
-            )
-        );
-
-        var administration = context.Menu.GetAdministration();
-
-        if (MultiTenancyConsts.IsEnabled)
-        {
-            administration.SetSubItemOrder(TenantManagementMenuNames.GroupName, 1);
-        }
-        else
-        {
-            administration.TryRemoveMenuItem(TenantManagementMenuNames.GroupName);
-        }
-
-        administration.SetSubItemOrder(IdentityMenuNames.GroupName, 2);
-        administration.SetSubItemOrder(SettingManagementMenus.GroupName, 3);
-
+        context.Menu.Items.Clear();
         return Task.CompletedTask;
     }
 

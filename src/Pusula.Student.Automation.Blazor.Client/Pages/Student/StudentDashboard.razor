@@ -1,0 +1,76 @@
+@page "/student/dashboard"
+@using Pusula.Student.Automation.Authorization
+@using Pusula.Student.Automation.StudentPortal
+@using Pusula.Student.Automation.Blazor.Client.Components.Student
+@inherits AutomationComponentBase
+@inject IStudentPortalAppService StudentPortalAppService
+
+<PageTitle>Öğrenci Paneli</PageTitle>
+
+<div class="container-fluid py-4">
+    @if (!IsStudent)
+    {
+        <div class="alert alert-warning">
+            Bu sayfa yalnızca öğrenci kullanıcılar içindir. Lütfen uygun hesapla giriş yapın.
+        </div>
+    }
+    else if (IsLoading)
+    {
+        <div class="text-center text-muted py-5">Veriler yükleniyor...</div>
+    }
+    else if (!ErrorMessage.IsNullOrWhiteSpace())
+    {
+        <div class="alert alert-danger">@ErrorMessage</div>
+    }
+    else if (Dashboard == null || Dashboard.Lessons.Count == 0)
+    {
+        <div class="alert alert-info">
+            Henüz kayıtlı olunan ders bulunamadı.
+        </div>
+    }
+    else
+    {
+        <div class="mb-4">
+            <h2>@Dashboard.Name @Dashboard.Surname</h2>
+            <p class="text-muted mb-0">Dersleriniz ve günlük raporlarınız</p>
+        </div>
+
+        @foreach (var lesson in Dashboard.Lessons)
+        {
+            <StudentLessonCard Lesson="lesson" />
+        }
+    }
+</div>
+
+@code {
+    private StudentDashboardDto? Dashboard;
+    private bool IsLoading;
+    private string? ErrorMessage;
+    private bool IsStudent => CurrentUser.IsInRole(AutomationRoleNames.Student);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsStudent)
+        {
+            await LoadDashboardAsync();
+        }
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        try
+        {
+            Dashboard = await StudentPortalAppService.GetDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

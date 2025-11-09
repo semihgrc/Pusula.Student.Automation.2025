@@ -1,3 +1,4 @@
+@using System.Linq
 @using Microsoft.AspNetCore.Components.Forms
 @using Pusula.Student.Automation.Enums
 @using Pusula.Student.Automation.LessonEnrollments
@@ -75,17 +76,26 @@ else
                                     }
                                 </td>
                                 <td>
+                                    @{
+                                        var availableStudents = GetAvailableStudents(lesson.Id).ToList();
+                                    }
                                     <select class="form-select form-select-sm" @onchange="e => OnLessonStudentSelectChanged(lesson.Id, e.Value?.ToString())">
                                         <option value="">Öğrenci seç</option>
-                                        @if (Students != null)
+                                        @if (availableStudents.Count == 0)
                                         {
-                                            @foreach (var student in Students)
+                                            <option value="" disabled>Uygun öğrenci yok</option>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var student in availableStudents)
                                             {
                                                 <option value="@student.Id">@student.Name @student.Surname</option>
                                             }
                                         }
                                     </select>
-                                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => AddStudentToLessonAsync(lesson.Id)">Ekle</button>
+                                    <button class="btn btn-outline-secondary btn-sm mt-2"
+                                            @onclick="() => AddStudentToLessonAsync(lesson.Id)"
+                                            disabled="@(!availableStudents.Any())">Ekle</button>
                                 </td>
                                 <td class="text-end">
                                     <button class="btn btn-link btn-sm" @onclick="() => BeginEditLesson(lesson)">Düzenle</button>
@@ -157,6 +167,22 @@ else
         {
             NewLesson.TeacherId = Teacher.Id;
         }
+    }
+
+    private IEnumerable<StudentDto> GetAvailableStudents(Guid lessonId)
+    {
+        if (Students == null || Lessons == null)
+        {
+            return Array.Empty<StudentDto>();
+        }
+
+        var enrolledIds = Lessons
+            .FirstOrDefault(l => l.Id == lessonId)?
+            .Enrollments?
+            .Select(e => e.StudentId)
+            .ToHashSet() ?? new HashSet<Guid>();
+
+        return Students.Where(student => !enrolledIds.Contains(student.Id));
     }
 
     private async Task CreateLessonAsync()

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Pusula.Student.Automation.LessonDailyReports;
+using Pusula.Student.Automation.LessonEnrollments;
 using Volo.Abp.Application.Dtos;
 
 namespace Pusula.Student.Automation.Lessons;
@@ -39,6 +40,7 @@ public class LessonDailyReportEntrySaveDto
     [Required]
     public Guid StudentId { get; set; }
     public bool IsPresent { get; set; }
+    [Range((double)LessonEnrollmentConsts.MinGrade, (double)LessonEnrollmentConsts.MaxGrade)]
     public decimal? DailyGrade { get; set; }
 
     [StringLength(LessonDailyReportConsts.MaxDailyCommentLength)]

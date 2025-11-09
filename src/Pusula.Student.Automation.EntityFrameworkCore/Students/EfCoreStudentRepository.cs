@@ -33,6 +33,12 @@ public class EfCoreStudentRepository
         return await dbSet.FirstOrDefaultAsync(x => x.StudentNumber == studentNumber, cancellationToken);
     }
 
+    public async Task<StudentEntity?> FindByIdentityUserIdAsync(Guid identityUserId, CancellationToken cancellationToken = default)
+    {
+        var dbSet = await GetDbSetAsync();
+        return await dbSet.FirstOrDefaultAsync(x => x.IdentityUserId == identityUserId, cancellationToken);
+    }
+
     public async Task<List<StudentEntity>> GetListAsync(
         string? filter = null,
         int skipCount = 0,
