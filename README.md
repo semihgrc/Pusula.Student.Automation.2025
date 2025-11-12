@@ -1,66 +1,98 @@
-# Pusula.Student.Automation
+## 📌 Genel Bakış
+**Pusula Student Automation**, ABP Framework ve Blazor ile geliştirilen, admin/öğretmen/öğrenci rolleri için uçtan uca ders, not ve devamsızlık yönetimi sunan çok katmanlı bir otomasyon sistemidir. Kullanıcılar rol bazlı yönlendirilir; giriş yapmayanlar doğrudan login sayfasına, giriş yapanlar ise rollerine göre özelleşmiş dashboard’lara yönlendirilir. ABP’nin self-registration akışı devre dışı bırakılmıştır; tüm öğretmen ve öğrenciler admin panelinden oluşturulur.
 
-## About this solution
+---
 
-This is a layered startup solution based on [Domain Driven Design (DDD)](https://abp.io/docs/latest/framework/architecture/domain-driven-design) practises. All the fundamental ABP modules are already installed. 
+## 🧱 Mimarî & Teknoloji Yığını
+| Katman | Teknolojiler | Açıklama |
+| ------ | ------------ | -------- |
+| Sunum  | Blazor Server + WASM (component/page düzeni) | Rol bazlı dashboard, filtrelenebilir listeler, inline edit formları |
+| Uygulama | ABP Application Services, DTO/AutoMapper | SOLID + DDD uyumlu servisler, global exception middleware’i |
+| Veri | EF Core + PostgreSQL | Ders, kullanıcı, rapor ve günlük kayıtları |
+| Altyapı | Docker, Redis, ElasticSearch, Serilog | Dağıtık cache, loglama ve containerized çalışma |
 
-### Pre-requirements
+- **Redis Cache:** `TeacherAppService.GetListAsync` öğretmen listelerini Redis’te 3 dk saklar; CRUD işlemleri cache versiyonunu yeniler. Bu sayede admin panelindeki yoğun listelemeler DB yerine cache’den servis edilir.
+- **ElasticSearch Logları:** Özellikle öğrenci oturum açma/günlük rapor girişleri gibi kritik iş akışları Serilog → Elastic’e yazılır; güvenlik ve denetlenebilirlik kolaylaşır.
+- **Global Exception Handling:** ABP’nin `AutomationBlazorModule` ayarlarında tanımlı; kullanıcıya temiz hata mesajı, log kanalına detaylı stack yazılır.
 
-* [.NET 9.0+ SDK](https://dotnet.microsoft.com/download/dotnet)
-* [Node v20.11+](https://nodejs.org/en)
+---
 
-### Configurations
+## 🎯 Rol Tabanlı Özellikler
 
-The solution comes with a default configuration that works out of the box. However, you may consider to change the following configuration before running your solution:
+### 👨‍💼 Admin Portalı
+- Öğretmen ve öğrenci kayıtlarını form üzerinden oluşturur (ABP default register kapalı).
+- Liste altındaki filtreler (isim, cinsiyet vb.) ile kayıtları arar; tabloyu Excel/PDF olarak indirebilir.
+- Öğretmen/öğrenci kartlarının üzerindeki **Detay** ve **Düzenle** butonlarıyla:
+  - Ders oluşturma/güncelleme/silme.
+  - Derse öğrenci ekleme/çıkarma (combobox sadece derste olmayan öğrencileri listeler, duplicate engellenir).
+  - Kullanıcı bilgilerini inline form üzerinde güncelleme.
 
+### 👩‍🏫 Teacher Portalı
+- Soldaki formdan yeni öğrenci oluşturabilir (admin onaylı sistemle entegre).
+- Orta panelde tüm dersleri görebilir; text veya ders durumu filtresi + “Yalnızca Derslerim” seçeneğiyle sadece kendi derslerine inebilir.
+- Ders **Detay** panelinde:
+  - Öğrencilere vize-final-not, devamsızlık, yorum ekleme/güncelleme/silme.
+  - Derse yeni öğrenci ekleme veya çıkarma (bağımlı rapor tabloları atomik şekilde güncellenir).
+  - Günlük rapor formunda tarih bazlı “geldi/gelmedi”, günlük not ve yorum kayıtları tutma; kayıtlar ID üzerinden güncellenir veya silinir.
 
-### Before running the application
+### 👨‍🎓 Student Portalı
+- Kayıtlı olduğu dersleri, ders öğretmenlerini, yıllık notlarını ve günlük raporlarını görüntüler.
+- Öğretmen yorumları, devamsızlık ve sözlü notlarını filtreleyebilir; sadece kendisine ait verilere erişir.
 
-#### Generating a Signing Certificate
+---
 
-In the production environment, you need to use a production signing certificate. ABP Framework sets up signing and encryption certificates in your application and expects an `openiddict.pfx` file in your application.
+## ⚙️ Kurulum (Kısa)
+1. **Ön koşullar:** .NET 9 SDK, Node 20+, ABP CLI, Docker (PostgreSQL 16 & Redis 7 konteynerları).  
+2. **Klon & Restore:**  
+   ```bash
+   git clone https://github.com/semihgrc/Pusula.Student.Automation.2025.git
+   cd Pusula.Student.Automation
+   dotnet restore
+   abp install-libs
+   ```
+3. **Docker altyapısı (örnek):**
+   ```bash
+   docker run --name pusula-postgres -e POSTGRES_PASSWORD=myPassw0rd -e POSTGRES_DB=test_db -p 5436:5432 -d postgres:16
+   docker run --name pusula-redis -p 6379:6379 -d redis:7
+   ```
+   Gerekiyorsa `src/Pusula.Student.Automation.Blazor/appsettings.json` dosyasında `ConnectionStrings.Default/Redis` değerlerini güncelle.
+4. **Migration & Seed:**  
+   ```bash
+   dotnet run --project src/Pusula.Student.Automation.DbMigrator
+   ```
+5. **Uygulamayı çalıştır:**  
+   ```bash
+   dotnet run --project src/Pusula.Student.Automation.Blazor
+   ```
+   → https://localhost:44333 üzerinden **ABP default admin** (`admin / 1q2w3E*`) ile giriş yap. Giriş yapılmadan hiçbir sayfaya erişilemez, login olmayan kullanıcılar otomatik olarak `/Account/Login`’a yönlendirilir.
 
-This certificate is already generated by ABP CLI, so most of the time you don't need to generate it yourself. However, if you need to generate a certificate, you can use the following command:
+---
 
-```bash
-dotnet dev-certs https -v -ep openiddict.pfx -p 73e4c794-c042-4ac1-8b99-d451806781a8
-```
+## 🔑 Kullanım Akışı & Test Notları
+- **İlk giriş mutlaka admin ile** yapılır; çünkü öğrenci/öğretmen kayıtları admin formlarından eklenir.
+- Öğretmen/öğrenci listelerinde filtre → tabloyu güncelle → Excel/PDF çıktılarını al.
+- Öğretmen/öğrenci kartlarındaki **Düzenle** butonları, kartın üzerinde inline form açar; buradan bilgiler güncellenebilir.
+- Ders detayında öğrenciler arayüzden eklenip çıkarıldığında rapor tabloları otomatik güncellenir.
+- Redis doğrulaması için `docker exec -it <redis-container> redis-cli monitor | findstr TeacherList` komutuyla admin panelinde listeyi yenilerken `GET/SET TeacherList:*` anahtarlarını gözlemleyebilirsin.
+- Elastik loglarını kontrol etmek için ElasticSearch + Kibana stack’inde `Application:Pusula.Student.Automation` filtresiyle logları incele (özellikle öğrenci girişleri).
 
-> `73e4c794-c042-4ac1-8b99-d451806781a8` is the password of the certificate, you can change it to any password you want.
+---
 
-It is recommended to use **two** RSA certificates, distinct from the certificate(s) used for HTTPS: one for encryption, one for signing.
+## ✅ Tamamlanan Bonuslar
+- Modern Blazor UI: rol bazlı dashboard, modüler form ve kimlik yönetimi tasarlandı.
+- Swagger/OpenAPI ile tüm endpoint’ler belgeli.
+- JWT + role-based authorization, ABP claim pipeline’ına entegre.
+- Redis cache + ElasticSearch loglama devreye alındı.
+- Öğrenci, öğretmen, ders ve günlük rapor gereksinimleri eksiksiz tamamlandı.
 
-For more information, please refer to: https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html#registering-a-certificate-recommended-for-production-ready-scenarios
+---
 
-> Also, see the [Configuring OpenIddict](https://abp.io/docs/latest/deployment/configuring-openiddict#production-environment) documentation for more information.
+## ⚠️ Dikkat Edilecekler
+- Admin oluşturmadan sisteme başka kullanıcı eklenemez.
+- Öğrenciye not/yorum/devamsızlık eklenmeden önce öğrenci ilgili derse kaydedilmiş olmalı.
+- Teacher portalında görülen diğer öğretmen dersleri “read-only”dır; yalnızca kendi derslerinde işlem yapabilir.
+- Günlük raporlar tarih/id bazlı tutulur; mevcut rapor seçilip kaydedildiğinde aynı kaydın üstüne yazılır, veri tutarlılığı korunur.
 
-#### Install Client-Side Libraries
+---
 
-Run the following command in the directory of your final application:
-
-```bash
-abp install-libs
-```
-
-> This command installs all NPM packages for MVC/Razor Pages and Blazor Server UIs and this command is already run by the ABP CLI, so most of the time you don't need to run this command manually.
-
-#### Create the Database
-
-Run `Pusula.Student.Automation.DbMigrator` to create the initial database. This should be done in the first run. It is also needed if a new database migration is added to the solution later.
-
-### Solution structure
-
-This is a layered monolith application that consists of the following applications:
-
-* `Pusula.Student.Automation.DbMigrator`: A console application which applies the migrations and also seeds the initial data. It is useful on development as well as on production environment.
-
-### Deploying the application
-
-Deploying an ABP application is not different than deploying any .NET or ASP.NET Core application. However, there are some topics that you should care about when you are deploying your applications. You can check ABP's [Deployment documentation](https://abp.io/docs/latest/deployment) before deploying your application.
-
-### Additional resources
-
-You can see the following resources to learn more about your solution and the ABP Framework:
-
-* [Web Application Development Tutorial](https://abp.io/docs/latest/tutorials/book-store/part-01?UI=Blazor&DB=EF)
-* [Application Startup Template Structure](https://abp.io/docs/latest/solution-templates/layered-web-application)
+Projeyi kurup çalıştırdıktan sonra `TeacherManagement` sayfasına giderek hem Redis cache’i hem de elastic loglarını doğrulayabilir, role-based yönlendirmeleri test edebilirsin.````
