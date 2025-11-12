@@ -21,6 +21,8 @@ using Pusula.Student.Automation.Blazor.Components;
 using Pusula.Student.Automation.EntityFrameworkCore;
 using Pusula.Student.Automation.Localization;
 using Pusula.Student.Automation.MultiTenancy;
+using Syncfusion.Blazor;
+using Syncfusion.Licensing;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
@@ -121,6 +123,14 @@ public class AutomationBlazorModule : AbpModule
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
+
+        var syncfusionLicenseKey = configuration["Syncfusion:LicenseKey"];
+        if (!string.IsNullOrWhiteSpace(syncfusionLicenseKey))
+        {
+            SyncfusionLicenseProvider.RegisterLicense(syncfusionLicenseKey);
+        }
+
+        context.Services.AddSyncfusionBlazor();
 
         var redisConnection = configuration.GetConnectionString("Redis");
         if (!string.IsNullOrWhiteSpace(redisConnection))

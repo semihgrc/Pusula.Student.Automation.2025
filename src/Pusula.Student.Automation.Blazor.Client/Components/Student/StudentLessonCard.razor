@@ -1,5 +1,6 @@
 @using Pusula.Student.Automation.StudentPortal
 @using Pusula.Student.Automation.Enums
+@using Syncfusion.Blazor.Grids
 
 <div class="card shadow-sm mb-4">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
@@ -33,41 +34,41 @@
                     </div>
                 }
             </div>
-            <div class="col-lg-8">
-                <h6 class="text-uppercase text-muted small">Günlük Raporlar</h6>
-                @if (Lesson.DailyReports.Count == 0)
-                {
-                    <div class="text-muted">Bu ders için henüz rapor bulunmuyor.</div>
-                }
-                else
-                {
-                    <div class="list-group list-group-flush">
-                        @foreach (var report in Lesson.DailyReports)
-                        {
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="fw-semibold">@report.Date.ToString("dd.MM.yyyy")</div>
-                                        <div class="small text-muted">
-                                            @(report.IsPresent ? "Geldi" : "Gelmedi")
-                                            @if (report.DailyGrade.HasValue)
-                                            {
-                                                <span class="ms-2">| Not: @report.DailyGrade.Value.ToString("0.##")</span>
-                                            }
-                                        </div>
-                                        @if (!report.DailyComment.IsNullOrWhiteSpace())
-                                        {
-                                            <div class="mt-1">@report.DailyComment</div>
-                                        }
-                                    </div>
-                                    <span class="badge @(report.IsPresent ? "bg-success" : "bg-danger")">
-                                        @(report.IsPresent ? "Geldi" : "Gelmedi")
-                                    </span>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
+            <div>
+                <div>Günlük Raporlar</div>
+                <SfGrid TItem="StudentDailyReportEntryDto"
+                        DataSource="Lesson.DailyReports">
+                    <GridTemplates>
+                        <EmptyRecordTemplate>
+                            <div>Bu ders için rapor oluşturmadınız.</div>
+                        </EmptyRecordTemplate>
+                    </GridTemplates>
+                    <GridColumns>
+                        <GridColumn Field="Date"
+                                    HeaderText="Tarih"
+                                    Type="ColumnType.Date"
+                                    Format="dd.MM.yyyy"/>
+                        <GridColumn HeaderText="Durum-Not">
+                            <Template>
+                                @{
+                                    var r = (context as StudentDailyReportEntryDto)!;
+                                }
+                                <span class="muted">
+                                    @(r.IsPresent ? "Geldi" : "Gelmedi")
+                                    @if (r.DailyGrade.HasValue)
+                                    {
+                                        <span> | Not: @r.DailyGrade!.Value.ToString("0.##")</span>
+                                    }
+                                </span>
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field="DailyComment"
+                                    HeaderText="Yorum" />
+                        <GridColumn HeaderText=""
+                                    TextAlign="TextAlign.Right">
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
             </div>
         </div>
     </div>
